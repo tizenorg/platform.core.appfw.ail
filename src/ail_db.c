@@ -1,0 +1,234 @@
+/*
+ * ail
+ *
+ * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
+ *
+ * Contact: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+
+
+
+#include <stdlib.h>
+#include <string.h>
+#include <db-util.h>
+#include <glib.h>
+#include "ail_private.h"
+#include "ail_db.h"
+
+#define retv_with_dbmsg_if(expr, val) do { \
+	if (expr) { \
+		_E("%s", sqlite3_errmsg(db_info.db)); \
+		return (val); \
+	} \
+} while (0)
+
+static __thread struct {
+	sqlite3		*db;
+} db_info = {
+	.db = NULL
+};
+
+ail_error_e db_open(void)
+{
+	int ret;
+
+	if (db_info.db) {
+		return AIL_ERROR_OK;
+	}
+
+	ret = db_util_open(APP_INFO_DB, &db_info.db, DB_UTIL_REGISTER_HOOK_METHOD);
+	retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+
+	return AIL_ERROR_OK;
+}
+
+
+
+ail_error_e db_prepare(const char *query, sqlite3_stmt **stmt)
+{
+	int ret;
+
+	retv_if(!query, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!db_info.db, AIL_ERROR_DB_FAILED);
+
+	ret = sqlite3_prepare_v2(db_info.db, query, strlen(query), stmt, NULL);
+	if (ret != SQLITE_OK) {
+		_E("%s\n", sqlite3_errmsg(db_info.db));
+		return AIL_ERROR_DB_FAILED;
+	} else 
+		return AIL_ERROR_OK;
+}
+
+
+ail_error_e db_bind_bool(sqlite3_stmt *stmt, int idx, bool value)
+{
+	int ret;
+
+	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+
+	ret = sqlite3_bind_int(stmt, idx, (int) value);
+	retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+
+	return AIL_ERROR_OK;
+}
+
+
+
+ail_error_e db_bind_int(sqlite3_stmt *stmt, int idx, int value)
+{
+	int ret;
+
+	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+
+	ret = sqlite3_bind_int(stmt, idx, value);
+	retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+
+	return AIL_ERROR_OK;
+}
+
+
+
+ail_error_e db_step(sqlite3_stmt *stmt)
+{
+	int ret;
+
+	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+
+	ret = sqlite3_step(stmt);
+	switch (ret) {
+		case SQLITE_DONE:
+			return AIL_ERROR_NO_DATA;
+		case SQLITE_ROW:
+			return AIL_ERROR_OK;
+	}
+
+	retv_with_dbmsg_if(1, AIL_ERROR_DB_FAILED);
+}
+
+
+
+ail_error_e db_column_bool(sqlite3_stmt *stmt, int index, bool *value)
+{
+	int out_val;
+
+	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
+
+	out_val = sqlite3_column_int(stmt, index);
+	*value = (out_val == 1)? true:false;
+
+	return AIL_ERROR_OK;
+}
+
+
+
+ail_error_e db_column_int(sqlite3_stmt *stmt, int index, int *value)
+{
+	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
+
+	*value = sqlite3_column_int(stmt, index);
+
+	return AIL_ERROR_OK;
+}
+
+
+
+ail_error_e db_column_str(sqlite3_stmt *stmt, int index, char **str)
+{
+	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!str, AIL_ERROR_INVALID_PARAMETER);
+
+	*str = (char *)sqlite3_column_text(stmt, index);
+
+	return AIL_ERROR_OK;
+}
+
+
+
+ail_error_e db_reset(sqlite3_stmt *stmt)
+{
+	int ret;
+
+	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+
+	sqlite3_clear_bindings(stmt);
+
+	ret = sqlite3_reset(stmt);
+	retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+
+	return AIL_ERROR_OK;
+}
+
+
+
+ail_error_e db_finalize(sqlite3_stmt *stmt)
+{
+	int ret;
+
+	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+
+	ret = sqlite3_finalize(stmt);
+	retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+
+	return AIL_ERROR_OK;
+}
+
+
+
+ail_error_e db_exec(const char *query)
+{
+	int ret;
+	char *errmsg;
+
+	retv_if(!query, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!db_info.db, AIL_ERROR_DB_FAILED);
+
+	ret = sqlite3_exec(db_info.db, query, NULL, NULL, &errmsg);
+	if (ret != SQLITE_OK) {
+		_E("Cannot execute this query - %s. because %s",
+				query, errmsg? errmsg:"uncatched error");
+		sqlite3_free(errmsg);
+		return AIL_ERROR_DB_FAILED;
+	}
+
+	return AIL_ERROR_OK;
+}
+
+
+
+ail_error_e db_close(void)
+{
+	int ret;
+
+	retv_if(!db_info.db, AIL_ERROR_FAIL);
+	ret = sqlite3_close(db_info.db);
+	retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+
+	db_info.db = NULL;
+
+	return AIL_ERROR_OK;
+}
+
+EXPORT_API ail_error_e ail_db_close(void)
+{
+	return db_close();
+}
+
+
+// End of file.

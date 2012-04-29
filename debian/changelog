@@ -1,0 +1,7 @@
+ail-0 (0.2.29) unstable; urgency=low
+
+  * Initial release
+  * Git: pkgs/a/ail
+  * Tag: ail-0_0.2.29
+
+ -- Sewook Park <sewook7.park@samsung.com>  Wed, 28 Mar 2012 16:14:59 +0900
