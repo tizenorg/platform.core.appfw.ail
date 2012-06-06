@@ -1,0 +1,4 @@
+* Wed June 06 2012 Yan Yin <yan.yin@intel.com> - 0.2.29
+- ail_initdb should be done on %posttrans instead of %post 
+- add missing ldconfig in %post and %postun
+

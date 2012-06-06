@@ -41,7 +41,7 @@ make %{?jobs:-j%jobs}
 rm -rf %{buildroot}
 %make_install
 
-%post
+%posttrans
 
 CHDBGID="6010"
 
@@ -65,7 +65,9 @@ ail_initdb
 update_DAC_for_db_file /opt/dbspace/.app_info.db
 update_DAC_for_db_file /opt/dbspace/.app_info.db-journal
 
-%postun
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
 
 %files
 %manifest ail.manifest
