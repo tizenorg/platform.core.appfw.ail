@@ -104,6 +104,11 @@ static ail_error_e _retrieve_all_column(ail_appinfo_h ai)
 
 EXPORT_API ail_error_e ail_package_destroy_appinfo(ail_appinfo_h ai)
 {
+	return ail_destroy_appinfo(ai);
+}
+
+EXPORT_API ail_error_e ail_destroy_appinfo(ail_appinfo_h ai)
+{
 	int i;
 
 	retv_if(!ai, AIL_ERROR_INVALID_PARAMETER);
@@ -122,7 +127,6 @@ EXPORT_API ail_error_e ail_package_destroy_appinfo(ail_appinfo_h ai)
 }
 
 
-
 EXPORT_API ail_error_e ail_package_get_appinfo(const char *package, ail_appinfo_h *ai)
 {
 	ail_error_e ret;
@@ -132,7 +136,7 @@ EXPORT_API ail_error_e ail_package_get_appinfo(const char *package, ail_appinfo_
 
 	retv_if(!package, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!ai, AIL_ERROR_INVALID_PARAMETER);
-	
+
 	*ai = appinfo_create();
 	retv_if(!*ai, AIL_ERROR_OUT_OF_MEMORY);
 
@@ -141,7 +145,7 @@ EXPORT_API ail_error_e ail_package_get_appinfo(const char *package, ail_appinfo_
 	snprintf(query, sizeof(query), "SELECT %s FROM %s WHERE %s",SQL_FLD_APP_INFO, SQL_TBL_APP_INFO, w);
 
 	do {
-		ret = db_open();
+		ret = db_open(DB_OPEN_RO);
 		if (ret < 0) break;
 
 		ret = db_prepare(query, &stmt);
@@ -173,6 +177,55 @@ EXPORT_API ail_error_e ail_package_get_appinfo(const char *package, ail_appinfo_
 	return ret;
 }
 
+EXPORT_API ail_error_e ail_get_appinfo(const char *appid, ail_appinfo_h *ai)
+{
+	ail_error_e ret;
+	char query[AIL_SQL_QUERY_MAX_LEN];
+	sqlite3_stmt *stmt = NULL;
+	char w[AIL_SQL_QUERY_MAX_LEN];
+
+	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!ai, AIL_ERROR_INVALID_PARAMETER);
+
+	*ai = appinfo_create();
+	retv_if(!*ai, AIL_ERROR_OUT_OF_MEMORY);
+
+	snprintf(w, sizeof(w), sql_get_filter(E_AIL_PROP_X_SLP_APPID_STR), appid);
+
+	snprintf(query, sizeof(query), "SELECT %s FROM %s WHERE %s",SQL_FLD_APP_INFO, SQL_TBL_APP_INFO, w);
+
+	do {
+		ret = db_open(DB_OPEN_RO);
+		if (ret < 0) break;
+
+		ret = db_prepare(query, &stmt);
+		if (ret < 0) break;
+
+		ret = db_step(stmt);
+		if (ret < 0) {
+			db_finalize(stmt);
+			break;
+		}
+
+		(*ai)->stmt = stmt;
+
+		ret = _retrieve_all_column(*ai);
+		if (ret < 0) {
+			db_finalize((*ai)->stmt);
+			break;
+		}
+
+		ret = db_finalize((*ai)->stmt);
+		if (ret < 0) break;
+		(*ai)->stmt = NULL;
+
+		return AIL_ERROR_OK;
+	} while(0);
+
+	appinfo_destroy(*ai);
+
+	return ret;
+}
 
 
 EXPORT_API ail_error_e ail_appinfo_get_bool(const ail_appinfo_h ai, const char *property, bool *value)
@@ -211,7 +264,7 @@ EXPORT_API ail_error_e ail_appinfo_get_int(const ail_appinfo_h ai, const char *p
 	retv_if(!property, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
 
-	prop = _ail_convert_to_prop_bool(property);
+	prop = _ail_convert_to_prop_int(property);
 
 	if (prop < E_AIL_PROP_INT_MIN || prop > E_AIL_PROP_INT_MAX)
 		return AIL_ERROR_INVALID_PARAMETER;
@@ -231,7 +284,7 @@ EXPORT_API ail_error_e ail_appinfo_get_int(const ail_appinfo_h ai, const char *p
 
 char *appinfo_get_localname(const char *package, char *locale)
 {
-	db_open();
+	db_open(DB_OPEN_RO);
 	sqlite3_stmt *stmt;
 	char *str = NULL;
 	char *localname;

@@ -46,14 +46,16 @@
 			"app_info.X_SLP_URI," \
 			"app_info.X_SLP_SVC," \
 			"app_info.X_SLP_EXE_PATH," \
+			"app_info.X_SLP_APPID," \
 			"app_info.X_SLP_BASELAYOUTWIDTH," \
-			"app_info.X_SLP_BASELAYOUTHEIGHT," \
+			"app_info.X_SLP_INSTALLEDTIME," \
 			"app_info.NODISPLAY," \
 			"app_info.X_SLP_TASKMANAGE," \
 			"app_info.X_SLP_MULTIPLE," \
 			"app_info.X_SLP_REMOVABLE," \
 			"app_info.X_SLP_ISHORIZONTALSCALE," \
-			"app_info.X_SLP_EVENTNOTIFICATIONSETTING"
+			"app_info.X_SLP_INACTIVATED"
+
 
 #define SQL_FLD_APP_INFO_WITH_LOCALNAME SQL_FLD_APP_INFO",""localname.name"
 #define SQL_LOCALNAME_IDX NUM_OF_PROP + 0

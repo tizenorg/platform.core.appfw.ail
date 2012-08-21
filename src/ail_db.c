@@ -31,27 +31,41 @@
 
 #define retv_with_dbmsg_if(expr, val) do { \
 	if (expr) { \
-		_E("%s", sqlite3_errmsg(db_info.db)); \
+		_E("db_info.dbro: %s", sqlite3_errmsg(db_info.dbro)); \
+		_E("db_info.dbrw: %s", sqlite3_errmsg(db_info.dbrw)); \
 		return (val); \
 	} \
 } while (0)
 
+
 static __thread struct {
-	sqlite3		*db;
+        sqlite3         *dbro;
+        sqlite3         *dbrw;
 } db_info = {
-	.db = NULL
+        .dbro = NULL,
+	.dbrw = NULL
 };
 
-ail_error_e db_open(void)
+ail_error_e db_open(db_open_mode mode)
 {
 	int ret;
+	int changed = 0;
 
-	if (db_info.db) {
-		return AIL_ERROR_OK;
+	if(mode & DB_OPEN_RO) {
+		if (!db_info.dbro) {
+			ret = db_util_open_with_options(APP_INFO_DB, &db_info.dbro, SQLITE_OPEN_READONLY, NULL);
+			_E("db_open_ro ret=%d", ret);
+			retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+		}
 	}
 
-	ret = db_util_open(APP_INFO_DB, &db_info.db, DB_UTIL_REGISTER_HOOK_METHOD);
-	retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+	if(mode & DB_OPEN_RW) {
+		if (!db_info.dbrw) {
+			ret = db_util_open(APP_INFO_DB, &db_info.dbrw, DB_UTIL_REGISTER_HOOK_METHOD);
+			_E("db_open_rw ret=%d", ret);
+			retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+		}
+	}
 
 	return AIL_ERROR_OK;
 }
@@ -64,11 +78,11 @@ ail_error_e db_prepare(const char *query, sqlite3_stmt **stmt)
 
 	retv_if(!query, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
-	retv_if(!db_info.db, AIL_ERROR_DB_FAILED);
+	retv_if(!db_info.dbro, AIL_ERROR_DB_FAILED);
 
-	ret = sqlite3_prepare_v2(db_info.db, query, strlen(query), stmt, NULL);
+	ret = sqlite3_prepare_v2(db_info.dbro, query, strlen(query), stmt, NULL);
 	if (ret != SQLITE_OK) {
-		_E("%s\n", sqlite3_errmsg(db_info.db));
+		_E("%s\n", sqlite3_errmsg(db_info.dbro));
 		return AIL_ERROR_DB_FAILED;
 	} else 
 		return AIL_ERROR_OK;
@@ -197,9 +211,9 @@ ail_error_e db_exec(const char *query)
 	char *errmsg;
 
 	retv_if(!query, AIL_ERROR_INVALID_PARAMETER);
-	retv_if(!db_info.db, AIL_ERROR_DB_FAILED);
+	retv_if(!db_info.dbrw, AIL_ERROR_DB_FAILED);
 
-	ret = sqlite3_exec(db_info.db, query, NULL, NULL, &errmsg);
+	ret = sqlite3_exec(db_info.dbrw, query, NULL, NULL, &errmsg);
 	if (ret != SQLITE_OK) {
 		_E("Cannot execute this query - %s. because %s",
 				query, errmsg? errmsg:"uncatched error");
@@ -216,11 +230,18 @@ ail_error_e db_close(void)
 {
 	int ret;
 
-	retv_if(!db_info.db, AIL_ERROR_FAIL);
-	ret = sqlite3_close(db_info.db);
-	retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+	if(db_info.dbro) {
+		ret = sqlite3_close(db_info.dbro);
+		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 
-	db_info.db = NULL;
+		db_info.dbro = NULL;
+	}
+	if(db_info.dbrw) {
+		ret = sqlite3_close(db_info.dbrw);
+		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+
+		db_info.dbrw = NULL;
+	}
 
 	return AIL_ERROR_OK;
 }

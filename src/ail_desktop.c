@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <xdgmime.h>
@@ -37,7 +38,8 @@
 #include "ail_db.h"
 #include "ail.h"
 
-#define DESKTOP_DIRECTORY "/opt/share/applications"
+#define OPT_DESKTOP_DIRECTORY "/opt/share/applications"
+#define USR_DESKTOP_DIRECTORY "/usr/share/applications"
 #define BUFSZE 4096
 
 #define whitespace(c) (((c) == ' ') || ((c) == '\t'))
@@ -97,14 +99,15 @@ typedef struct {
 	char*		x_slp_uri;
 	char*		x_slp_svc;
 	char*		x_slp_exe_path;
+	char*		x_slp_appid;
 	int		x_slp_baselayoutwidth;
-	int		x_slp_baselayoutheight;
+	int		x_slp_installedtime;
 	int		nodisplay;
 	int		x_slp_taskmanage;
 	int		x_slp_multiple;
 	int		x_slp_removable;
 	int		x_slp_ishorizontalscale;
-	int		x_slp_eventnotificationsetting;
+	int		x_slp_inactivated;
 	char*		desktop;
 	GSList*		localname;
 } desktop_info_s;
@@ -159,14 +162,14 @@ static ail_error_e _read_name(void *data, char *tag, char *value)
 		struct name_item *item;
 		item = (struct name_item *)calloc(1, sizeof(struct name_item));
 		retv_if (NULL == item, AIL_ERROR_OUT_OF_MEMORY);
-		
+
 		SAFE_FREE_AND_STRDUP(tag, item->locale);
 		if(NULL == item->locale) {
 			_E("(NULL == item->locale) return\n");
 			free(item);
 			return AIL_ERROR_OUT_OF_MEMORY;
 		}
-		
+
 		SAFE_FREE_AND_STRDUP(value, item->name);
 		if(NULL == item->name) {
 			_E("(NULL == item->name) return\n");
@@ -174,7 +177,7 @@ static ail_error_e _read_name(void *data, char *tag, char *value)
 			free(item);
 			return AIL_ERROR_OUT_OF_MEMORY;
 		}
-			
+
 		info->localname = g_slist_append(info->localname, item);
 
 		return AIL_ERROR_OK;
@@ -254,15 +257,32 @@ _get_icon_with_path(char* icon)
 			free(theme);
 			return NULL;
 		}
-		
+
 		memset(icon_with_path, 0, len);
 
-		snprintf(icon_with_path, len, "/opt/apps/%s/res/icons/%s/small/%s", package, theme, icon);
+		snprintf(icon_with_path, len, "/opt/share/icons/%s/small/%s", theme, icon);
 		do {
+			if (access(icon_with_path, R_OK) == 0) break;
+			snprintf(icon_with_path, len, "/usr/share/icons/%s/small/%s", theme, icon);
+			if (access(icon_with_path, R_OK) == 0) break;
+			_D("cannot find icon %s", icon_with_path);
+			snprintf(icon_with_path, len, "/opt/share/icons/default/small/%s", icon);
+			if (access(icon_with_path, R_OK) == 0) break;
+			snprintf(icon_with_path, len, "/usr/share/icons/default/small/%s", icon);
+			if (access(icon_with_path, R_OK) == 0) break;
+
+			#if 1 /* this will be remove when finish the work for moving icon path */
+			_E("icon file must be moved to %s", icon_with_path);
+			snprintf(icon_with_path, len, "/opt/apps/%s/res/icons/%s/small/%s", package, theme, icon);
+			if (access(icon_with_path, R_OK) == 0) break;
+			snprintf(icon_with_path, len, "/usr/apps/%s/res/icons/%s/small/%s", package, theme, icon);
 			if (access(icon_with_path, R_OK) == 0) break;
 			_D("cannot find icon %s", icon_with_path);
 			snprintf(icon_with_path, len, "/opt/apps/%s/res/icons/default/small/%s", package, icon);
 			if (access(icon_with_path, R_OK) == 0) break;
+			snprintf(icon_with_path, len, "/usr/apps/%s/res/icons/default/small/%s", package, icon);
+			if (access(icon_with_path, R_OK) == 0) break;
+			#endif
 		} while (0);
 
 		free(theme);
@@ -289,7 +309,7 @@ static ail_error_e _read_icon(void *data, char *tag, char *value)
 	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
 
 	info->icon = _get_icon_with_path(value);
-	
+
 	retv_if (!info->icon, AIL_ERROR_OUT_OF_MEMORY);
 
 	return AIL_ERROR_OK;
@@ -534,20 +554,18 @@ static ail_error_e _read_x_slp_removable(void *data, char *tag, char *value)
 }
 
 
-
-static ail_error_e _read_x_slp_eventnotificationsetting(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_appid(void *data, char *tag, char *value)
 {
 	desktop_info_s *info = data;
 
 	retv_if(!data, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
 
-	info->x_slp_eventnotificationsetting = !strcasecmp(value, "true") || !strcasecmp(value, "1");
+	SAFE_FREE_AND_STRDUP(value, info->x_slp_appid);
+	retv_if(!info->x_slp_appid, AIL_ERROR_OUT_OF_MEMORY);
 
 	return AIL_ERROR_OK;
 }
-
-
 
 static struct entry_parser entry_parsers[] = {
 	{
@@ -619,8 +637,8 @@ static struct entry_parser entry_parsers[] = {
 		.value_cb = _read_x_slp_removable,
 	},
 	{
-		.field = "x-tizen-eventnotificationsetting",
-		.value_cb = _read_x_slp_eventnotificationsetting,
+		.field = "x-tizen-appid",
+		.value_cb = _read_x_slp_appid,
 	},
 	{
 		.field = NULL,
@@ -656,11 +674,16 @@ char *_pkgname_to_desktop(const char *package)
 
 	retv_if(!package, NULL);
 
-	size = strlen(DESKTOP_DIRECTORY) + strlen(package) + 10;
+	size = strlen(OPT_DESKTOP_DIRECTORY) + strlen(package) + 10;
 	desktop = malloc(size);
 	retv_if(!desktop, NULL);
 
-	snprintf(desktop, size, DESKTOP_DIRECTORY"/%s.desktop", package);
+	snprintf(desktop, size, OPT_DESKTOP_DIRECTORY"/%s.desktop", package);
+
+	if (access(desktop, R_OK) == 0)
+		return desktop;
+
+	snprintf(desktop, size, USR_DESKTOP_DIRECTORY"/%s.desktop", package);
 
 	return desktop;
 }
@@ -688,9 +711,19 @@ static inline int _strlen_desktop_info(desktop_info_s* info)
 	if (info->x_slp_uri) len += strlen(info->x_slp_uri);
 	if (info->x_slp_svc) len += strlen(info->x_slp_svc);
 	if (info->x_slp_exe_path) len += strlen(info->x_slp_exe_path);
+	if (info->x_slp_appid) len += strlen(info->x_slp_appid);
 	if (info->desktop) len += strlen(info->desktop);
 
 	return len;
+}
+
+
+int __is_ail_initdb(void)
+{
+	if( getenv("AIL_INITDB") || getenv("INITDB") )
+		return 1;
+	else
+		return 0;
 }
 
 
@@ -698,6 +731,11 @@ static inline int _strlen_desktop_info(desktop_info_s* info)
 /* Manipulating desktop_info functions */
 static ail_error_e _init_desktop_info(desktop_info_s *info, const char *package)
 {
+	static int is_initdb = -1;
+
+	if(is_initdb == -1)
+		is_initdb = __is_ail_initdb();
+
 	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!package, AIL_ERROR_INVALID_PARAMETER);
 
@@ -706,15 +744,23 @@ static ail_error_e _init_desktop_info(desktop_info_s *info, const char *package)
 
 	info->x_slp_taskmanage = 1;
 	info->x_slp_removable = 1;
+
+	if(is_initdb)
+		info->x_slp_installedtime = 0;
+	else
+		info->x_slp_installedtime = time(NULL);
+
 #ifdef PKGTYPE
 	info->x_slp_packagetype = strdup(PKGTYPE);
 #else
-	info->x_slp_packagetype = strdup("deb");
+	info->x_slp_packagetype = strdup("rpm");
 #endif
 	retv_if(!info->x_slp_packagetype, AIL_ERROR_OUT_OF_MEMORY);
 
 	info->x_slp_packageid = strdup(package);
 	retv_if(!info->x_slp_packageid, AIL_ERROR_OUT_OF_MEMORY);
+	info->x_slp_appid = strdup(package);
+	retv_if(!info->x_slp_appid, AIL_ERROR_OUT_OF_MEMORY);
 
 	info->desktop = _pkgname_to_desktop(package);
 	retv_if(!info->desktop, AIL_ERROR_FAIL);
@@ -788,6 +834,34 @@ NEXT:
 
 
 
+static ail_error_e _modify_desktop_info_bool(desktop_info_s* info,
+						  const char *property,
+						  bool value)
+{
+	ail_prop_bool_e prop;
+	int val;
+
+	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!property, AIL_ERROR_INVALID_PARAMETER);
+
+	prop = _ail_convert_to_prop_bool(property);
+
+	if (prop < E_AIL_PROP_BOOL_MIN || prop > E_AIL_PROP_BOOL_MAX)
+		return AIL_ERROR_INVALID_PARAMETER;
+
+	switch (prop) {
+		case E_AIL_PROP_X_SLP_INACTIVATED_BOOL:
+			info->x_slp_inactivated = (int)value;
+			break;
+		default:
+			return AIL_ERROR_FAIL;
+	}
+
+	return AIL_ERROR_OK;
+}
+
+
+
 static ail_error_e _create_table(void)
 {
 	int i;
@@ -809,14 +883,15 @@ static ail_error_e _create_table(void)
 		"x_slp_uri TEXT, "
 		"x_slp_svc TEXT, "
 		"x_slp_exe_path TEXT, "
+		"x_slp_appid TEXT, "
 		"x_slp_baselayoutwidth INTEGER DEFAULT 0, "
-		"x_slp_baselayoutheight INTEGER DEFAULT 0, "
+		"x_slp_installedtime INTEGER DEFAULT 0, "
 		"nodisplay INTEGER DEFAULT 0, "
 		"x_slp_taskmanage INTEGER DEFAULT 1, "
 		"x_slp_multiple INTEGER DEFAULT 0, "
 		"x_slp_removable INTEGER DEFAULT 1, "
 		"x_slp_ishorizontalscale INTEGER DEFAULT 0, "
-		"x_slp_eventnotificationsetting INTEGER DEFAULT 0, "
+		"x_slp_inactivated INTEGER DEFAULT 0, "
 		"desktop TEXT UNIQUE NOT NULL);",
 		"CREATE TABLE localname (package TEXT NOT NULL, "
 		"locale TEXT NOT NULL, "
@@ -824,7 +899,7 @@ static ail_error_e _create_table(void)
 		NULL
 	};
 
-	ret = db_open();
+	ret = db_open(DB_OPEN_RW);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
 
 	for (i = 0; tbls[i] != NULL; i++) {
@@ -875,19 +950,20 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 		"x_slp_uri, "
 		"x_slp_svc, "
 		"x_slp_exe_path, "
+		"x_slp_appid, "
 		"x_slp_baselayoutwidth, "
-		"x_slp_baselayoutheight, "
+		"x_slp_installedtime, "
 		"nodisplay, "
 		"x_slp_taskmanage, "
 		"x_slp_multiple, "
 		"x_slp_removable, "
 		"x_slp_ishorizontalscale, "
-		"x_slp_eventnotificationsetting, "
+		"x_slp_inactivated, "
 		"desktop) "
 		"values "
 		"('%s', '%s', '%s', '%s', '%s', "
 		"'%s', '%s', '%s', '%s', '%s', "
-		"'%s', '%s', '%s', '%s', '%s', "
+		"'%s', '%s', '%s', '%s', '%s', '%s', "
 		"%d, %d, %d, %d, %d, %d, "
 		"%d, %d, "
 		"'%s');",
@@ -906,18 +982,19 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 		info->x_slp_uri,
 		info->x_slp_svc,
 		info->x_slp_exe_path,
+		info->x_slp_appid,
 		info->x_slp_baselayoutwidth,
-		info->x_slp_baselayoutheight,
+		info->x_slp_installedtime,
 		info->nodisplay,
 		info->x_slp_taskmanage,
 		info->x_slp_multiple,
 		info->x_slp_removable,
 		info->x_slp_ishorizontalscale,
-		info->x_slp_eventnotificationsetting,
+		info->x_slp_inactivated,
 		info->desktop
 		);
 
-	ret = db_open();
+	ret = db_open(DB_OPEN_RW);
 	if(ret != AIL_ERROR_OK) {
 		_E("(tmp == NULL) return\n");
 		free(query);
@@ -944,7 +1021,7 @@ static ail_error_e _update_desktop_info(desktop_info_s *info)
 
 	retv_if (NULL == info, AIL_ERROR_INVALID_PARAMETER);
 
-	if (db_open() < 0) {
+	if (db_open(DB_OPEN_RW) < 0) {
 		return AIL_ERROR_DB_FAILED;
 	}
 
@@ -967,14 +1044,15 @@ static ail_error_e _update_desktop_info(desktop_info_s *info)
 		"x_slp_uri='%s', "
 		"x_slp_svc='%s', "
 		"x_slp_exe_path='%s', "
+		"x_slp_appid='%s', "
 		"x_slp_baselayoutwidth=%d, "
-		"x_slp_baselayoutheight=%d, "
+		"x_slp_installedtime=%d, "
 		"nodisplay=%d, "
 		"x_slp_taskmanage=%d, "
 		"x_slp_multiple=%d, "
 		"x_slp_removable=%d, "
 		"x_slp_ishorizontalscale=%d, "
-		"x_slp_eventnotificationsetting=%d, "
+		"x_slp_inactivated=%d, "
 		"desktop='%s'"
 		"where package='%s'",
 		info->exec,
@@ -991,14 +1069,15 @@ static ail_error_e _update_desktop_info(desktop_info_s *info)
 		info->x_slp_uri,
 		info->x_slp_svc,
 		info->x_slp_exe_path,
+		info->x_slp_appid,
 		info->x_slp_baselayoutwidth,
-		info->x_slp_baselayoutheight,
+		info->x_slp_installedtime,
 		info->nodisplay,
 		info->x_slp_taskmanage,
 		info->x_slp_multiple,
 		info->x_slp_removable,
 		info->x_slp_ishorizontalscale,
-		info->x_slp_eventnotificationsetting,
+		info->x_slp_inactivated,
 		info->desktop,
 		info->package);
 
@@ -1033,7 +1112,7 @@ static ail_error_e _remove_package(const char* package)
 
 	retv_if(!package, AIL_ERROR_INVALID_PARAMETER);
 
-	if (db_open() < 0) {
+	if (db_open(DB_OPEN_RW) < 0) {
 		return AIL_ERROR_DB_FAILED;
 	}
 
@@ -1127,6 +1206,7 @@ static void _fini_desktop_info(desktop_info_s *info)
 	SAFE_FREE(info->x_slp_uri);
 	SAFE_FREE(info->x_slp_svc);
 	SAFE_FREE(info->x_slp_exe_path);
+	SAFE_FREE(info->x_slp_appid);
 	SAFE_FREE(info->desktop);
 	if (info->localname) {
 		g_slist_free_full(info->localname, _name_item_free_func);
@@ -1214,6 +1294,38 @@ EXPORT_API ail_error_e ail_desktop_remove(const char *package)
 
 	return AIL_ERROR_OK;
 }
+
+
+EXPORT_API ail_error_e ail_desktop_appinfo_modify_bool(const char *package,
+							     const char *property,
+							     bool value)
+{
+	desktop_info_s info = {0,};
+	ail_error_e ret;
+	ail_prop_bool_e prop;
+
+	retv_if(!package, AIL_ERROR_INVALID_PARAMETER);
+
+	retv_if(strcmp(property, AIL_PROP_X_SLP_INACTIVATED_BOOL),
+		AIL_ERROR_INVALID_PARAMETER);
+
+	ret = _init_desktop_info(&info, package);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+
+	ret = _modify_desktop_info_bool(&info, property, value);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+
+	ret = _update_desktop_info(&info);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+
+	ret = _send_db_done_noti(NOTI_UPDATE, package);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+
+	_fini_desktop_info(&info);
+
+	return AIL_ERROR_OK;
+}
+
 
 
 

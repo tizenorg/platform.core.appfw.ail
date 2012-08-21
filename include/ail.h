@@ -69,12 +69,14 @@ extern "C" {
 #define	AIL_PROP_X_SLP_PACKAGEID_STR		"AIL_PROP_X_SLP_PACKAGEID_STR"
 #define	AIL_PROP_X_SLP_SVC_STR			"AIL_PROP_X_SLP_SVC_STR"
 #define	AIL_PROP_X_SLP_EXE_PATH			"AIL_PROP_X_SLP_EXE_PATH"
+#define	AIL_PROP_X_SLP_APPID_STR		"AIL_PROP_X_SLP_APPID_STR"
+
 
 /**
  * @brief integer type properties
  */
-/* #define	AIL_PROP_X_SLP_BASELAYOUTWIDTH_INT	"AIL_PROP_X_SLP_BASELAYOUTWIDTH_INT" */
-/* #define	AIL_PROP_X_SLP_BASELAYOUTHEIGHT_INT	"AIL_PROP_X_SLP_BASELAYOUTHEIGHT_INT" */
+#define	AIL_PROP_X_SLP_TEMP_INT			"AIL_PROP_X_SLP_TEMP_INT"
+#define	AIL_PROP_X_SLP_INSTALLEDTIME_INT	"AIL_PROP_X_SLP_INSTALLEDTIME_INT"
 
 /**
  * @brief boolean type properties
@@ -83,6 +85,7 @@ extern "C" {
 #define	AIL_PROP_X_SLP_TASKMANAGE_BOOL		"AIL_PROP_X_SLP_TASKMANAGE_BOOL"
 #define	AIL_PROP_X_SLP_MULTIPLE_BOOL		"AIL_PROP_X_SLP_MULTIPLE_BOOL"
 #define	AIL_PROP_X_SLP_REMOVABLE_BOOL		"AIL_PROP_X_SLP_REMOVABLE_BOOL"
+#define	AIL_PROP_X_SLP_INACTIVATED_BOOL		"AIL_PROP_X_SLP_INACTIVATED_BOOL"
 
 
 /**
@@ -620,17 +623,74 @@ static ail_error_e _get_name(const char *package)
 ail_error_e ail_package_get_appinfo(const char *package, ail_appinfo_h *handle);
 
 
+/**
+ * @fn ail_error_e ail_get_appinfo(const char *appid, ail_appinfo_h *handle)
+ *
+ * @brief get an application information related to a appid.
+	This API just retrieves all the information of the application from Application Information Database.
+	All data related to the appid are loaded in the memory after calling this function.
+	If you want to read a value from the retrieving data, you have to use the functions of ail_appinfo_get_xxx.
+
+ * @par Sync (or) Async : Synchronous API.
+ *
+ * @param[in] appid appid what you want to know about.
+ * @param[out] handle handle will be used with the functions of ail_appinfo_get_xxx. If no data, it will be NULL.
+ *
+ * @return 0 if success, negative value(<0) if fail\n
+ * @retval	AIL_ERROR_OK					success
+ * @retval 	AIL_ERROR_FAIL					internal error
+ * @retval	AIL_ERROR_DB_FAILED				database error
+ * @retval	AIL_ERROR_INVALID_PARAMETER		invalid parameter
+ * @retval	AIL_ERROR_NO_DATA				no data. cannot find the package.
+ *
+ * @pre declare a handle before calling this function. The handle is used as a second argument of this API.
+ * @post destroy the handle with the function of ail_get_appinfo after using it all.
+ *
+ * @see  ail_get_appinfo(), ail_appinfo_get_bool(), ail_appinfo_get_int(), ail_appinfo_get_str()
+ *
+ * @par Prospective Clients:
+ * External Apps.
+ *
+ * @code
+static ail_error_e _get_name(const char *appid)
+{
+	ail_appinfo_h handle;
+	ail_error_e ret;
+	char *str;
+
+	ret = ail_get_appinfo(appid, &handle);
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+
+	ret = ail_appinfo_get_str(handle, AIL_PROP_NAME_STR, &str);
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+	fprintf(stderr, "Package[%s], Property[%s] : %s\n", appid, property, str);
+
+	ret = ail_destroy_appinfo(handle);
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+
+	return AIL_ERROR_OK;
+}
+ * @endcode
+ */
+ail_error_e ail_get_appinfo(const char *appid, ail_appinfo_h *handle);
+
 
 /**
  * @fn ail_error_e ail_appinfo_get_bool(const ail_appinfo_h handle, const char *property, bool *value)
  *
  * @brief get a boolean value related to the property. 
- 	Before using this API, the handle is defined by calling ail_package_get_appinfo. 
+ 	Before using this API, the handle is defined by calling ail_get_appinfo.
 	This function needs a out-parameter for the value.
  *
  * @par Sync (or) Async : Synchronous API.
  *
- * @param[in] handle	the handle is defined by calling ail_package_get_appinfo.
+ * @param[in] handle	the handle is defined by calling ail_get_appinfo.
  * @param[in] property	 a property type of boolean
  * @param[out] value	a out-parameter value that is mapped with the property.
  *
@@ -639,10 +699,10 @@ ail_error_e ail_package_get_appinfo(const char *package, ail_appinfo_h *handle);
  * @retval	AIL_ERROR_DB_FAILED				database error
  * @retval 	AIL_ERROR_INVALID_PARAMETER		invalid parameter
  *
- * @pre define a handle using ail_package_get_appinfo. The handle is used as a first argument of this API.
- * @post destroy the handle with the function of ail_package_destroy_appinfo after using it all.
+ * @pre define a handle using ail_get_appinfo. The handle is used as a first argument of this API.
+ * @post destroy the handle with the function of ail_destroy_appinfo after using it all.
  *
- * @see  ail_package_get_appinfo(), ail_package_destroy_appinfo(), ail_appinfo_get_int(), ail_appinfo_get_str()
+ * @see  ail_get_appinfo(), ail_destroy_appinfo(), ail_appinfo_get_int(), ail_appinfo_get_str()
  *
  * @par Prospective Clients:
  * External Apps.
@@ -654,7 +714,7 @@ static ail_error_e _get_nodisplay(const char *package)
 	ail_error_e ret;
 	bool value;
 
-	ret = ail_package_get_appinfo(package, &handle);
+	ret = ail_get_appinfo(package, &handle);
 	if (ret != AIL_ERROR_OK) {
 		return AIL_ERROR_FAIL;
 	}
@@ -665,7 +725,7 @@ static ail_error_e _get_nodisplay(const char *package)
 	}
 	fprintf(stderr, "Package[%s] : %d\n", package, value);
 
-	ret = ail_package_destroy_appinfo(handle);
+	ret = ail_destroy_appinfo(handle);
 	if (ret != AIL_ERROR_OK) {
 		return AIL_ERROR_FAIL;
 	}
@@ -682,12 +742,12 @@ ail_error_e ail_appinfo_get_bool(const ail_appinfo_h handle, const char *propert
  * @fn ail_error_e ail_appinfo_get_int(const ail_appinfo_h handle, const char *property, int *value)
  *
  * @brief get a integer value related to the property. 
- 	Before using this API, the handle is defined by calling ail_package_get_appinfo. 
+ 	Before using this API, the handle is defined by calling ail_get_appinfo.
 	This function needs a out-parameter for the value.
  *
  * @par Sync (or) Async : Synchronous API.
  *
- * @param[in] handle	the handle is defined by calling ail_package_get_appinfo.
+ * @param[in] handle	the handle is defined by calling ail_get_appinfo.
  * @param[in] property	a property type of integer.
  * @param[out] value	a out-parameter value that is mapped with the property.
  *
@@ -696,10 +756,10 @@ ail_error_e ail_appinfo_get_bool(const ail_appinfo_h handle, const char *propert
  * @retval	AIL_ERROR_DB_FAILED				database error
  * @retval	AIL_ERROR_INVALID_PARAMETER		invalid parameter
  *
- * @pre define a handle using ail_package_get_appinfo. The handle is used as a first argument of this API.
- * @post destroy the handle with the function of ail_package_destroy_appinfo after using it all.
+ * @pre define a handle using ail_get_appinfo. The handle is used as a first argument of this API.
+ * @post destroy the handle with the function of ail_destroy_appinfo after using it all.
  *
- * @see  ail_package_get_appinfo(), ail_package_destroy_appinfo(), ail_appinfo_get_bool(), ail_appinfo_get_str()
+ * @see  ail_get_appinfo(), ail_destroy_appinfo(), ail_appinfo_get_bool(), ail_appinfo_get_str()
  *
  * @par Prospective Clients:
  * External Apps.
@@ -711,7 +771,7 @@ static ail_error_e _get_x_slp_baselayoutwidth(const char *package)
 	ail_error_e ret;
 	int value;
 
-	ret = ail_package_get_appinfo(package, &handle);
+	ret = ail_get_appinfo(package, &handle);
 	if (ret != AIL_ERROR_OK) {
 		return AIL_ERROR_FAIL;
 	}
@@ -722,7 +782,7 @@ static ail_error_e _get_x_slp_baselayoutwidth(const char *package)
 	}
 	fprintf(stderr, "Package[%s] : %d\n", package, value);
 
-	ret = ail_package_destroy_appinfo(handle);
+	ret = ail_destroy_appinfo(handle);
 	if (ret != AIL_ERROR_OK) {
 		return AIL_ERROR_FAIL;
 	}
@@ -739,12 +799,12 @@ ail_error_e ail_appinfo_get_int(const ail_appinfo_h handle, const char *property
  * @fn ail_error_e ail_appinfo_get_str(const ail_appinfo_h handle, const char *property, char **str)
  *
  * @brief get a string related to the property. 
- 	Before using this API, the handle is defined by calling ail_package_get_appinfo. 
+ 	Before using this API, the handle is defined by calling ail_get_appinfo.
 	This function needs a out-parameter for the value.
  *
  * @par Sync (or) Async : Synchronous API.
  *
- * @param[in] handle	the handle is defined by calling ail_package_get_appinfo.
+ * @param[in] handle	the handle is defined by calling ail_get_appinfo.
  * @param[in] property	a property type of string.
  * @param[out] str		a out-parameter string that is mapped with the property. The icon property contains the absolute file path. If there is no data, the value of str is NULL.
  *
@@ -753,10 +813,10 @@ ail_error_e ail_appinfo_get_int(const ail_appinfo_h handle, const char *property
  * @retval	AIL_ERROR_DB_FAILED				database error
  * @retval	AIL_ERROR_INVALID_PARAMETER		invalid parameter
  *
- * @pre define a handle using ail_package_get_appinfo. The handle is used as a first argument of this API.
- * @post str doesn't need to be freed. It will be freed by calling ail_package_destroy_appinfo. 
+ * @pre define a handle using ail_get_appinfo. The handle is used as a first argument of this API.
+ * @post str doesn't need to be freed. It will be freed by calling ail_destroy_appinfo.
  *
- * @see  ail_package_get_appinfo(), ail_package_destroy_appinfo(), ail_appinfo_get_bool(), ail_appinfo_get_int()
+ * @see  ail_get_appinfo(), ail_destroy_appinfo(), ail_appinfo_get_bool(), ail_appinfo_get_int()
  *
  * @par Prospective Clients:
  * External Apps.
@@ -768,7 +828,7 @@ static ail_error_e _get_nodisplay(const char *package)
 	ail_error_e ret;
 	char* value;
 
-	ret = ail_package_get_appinfo(package, &handle);
+	ret = ail_get_appinfo(package, &handle);
 	if (ret != AIL_ERROR_OK) {
 		return AIL_ERROR_FAIL;
 	}
@@ -779,7 +839,7 @@ static ail_error_e _get_nodisplay(const char *package)
 	}
 	fprintf(stderr, "Package[%s] : %d\n", package, value);
 
-	ret = ail_package_destroy_appinfo(handle);
+	ret = ail_destroy_appinfo(handle);
 	if (ret != AIL_ERROR_OK) {
 		return AIL_ERROR_FAIL;
 	}
@@ -843,6 +903,57 @@ static ail_error_e _get_name(const char *package)
  */
 ail_error_e ail_package_destroy_appinfo(const ail_appinfo_h handle);
 
+
+/**
+ * @fn ail_error_e ail_destroy_appinfo(const ail_appinfo_h handle)
+ *
+ * @brief destroy a handle what you get with the function of ail_get_appinfo.
+ *
+ * @par Sync (or) Async : Synchronous API.
+ *
+ * @param[in] handle destroy all resources related to the handle.
+ *
+ * @return 0 if success, negative value(<0) if fail\n
+ * @retval	AIL_ERROR_OK					success
+ * @retval	AIL_ERROR_DB_FAILED				database error
+ * @retval	AIL_ERROR_INVALID_PARAMETER		invalid parameter
+ *
+ * @pre need a handle that you don't need anymore.
+ * @post cannot use the handle after destroying.
+ *
+ * @see  ail_get_appinfo(), ail_appinfo_get_bool(), ail_appinfo_get_int(), ail_appinfo_get_str()
+ *
+ * @par Prospective Clients:
+ * External Apps.
+ *
+ * @code
+static ail_error_e _get_name(const char *appid)
+{
+	ail_appinfo_h handle;
+	ail_error_e ret;
+	char *str;
+
+	ret = ail_get_appinfo(appid, &handle);
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+
+	ret = ail_appinfo_get_str(handle, AIL_PROP_NAME_STR, &str);
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+	fprintf(stderr, "Package[%s], Property[%s] : %s\n", appid, property, str);
+
+	ret = ail_destroy_appinfo(handle);
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+
+	return AIL_ERROR_OK;
+}
+ * @endcode
+ */
+ail_error_e ail_destroy_appinfo(const ail_appinfo_h handle);
 
 
 /**

@@ -122,7 +122,7 @@ EXPORT_API ail_error_e ail_filter_add_int(ail_filter_h filter, const char *prope
 	retv_if (NULL == filter, AIL_ERROR_INVALID_PARAMETER);
 	retv_if (NULL == property, AIL_ERROR_INVALID_PARAMETER);
 
-	prop = _ail_convert_to_prop_bool(property);
+	prop = _ail_convert_to_prop_int(property);
 
 	if (prop < E_AIL_PROP_INT_MIN || prop > E_AIL_PROP_INT_MAX)
 		return AIL_ERROR_INVALID_PARAMETER;
@@ -250,7 +250,7 @@ EXPORT_API ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *cnt)
 
 	retv_if(!cnt, AIL_ERROR_INVALID_PARAMETER);
 
-	if (db_open() != AIL_ERROR_OK)
+	if (db_open(DB_OPEN_RO) != AIL_ERROR_OK)
 		return AIL_ERROR_DB_FAILED;
 
 	snprintf(q, sizeof(q), "SELECT COUNT (*) FROM %s", SQL_TBL_APP_INFO_WITH_LOCALNAME);
@@ -306,7 +306,7 @@ EXPORT_API ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_
 
 	retv_if (NULL == cb, AIL_ERROR_INVALID_PARAMETER);
 
-	if (db_open() != AIL_ERROR_OK)
+	if (db_open(DB_OPEN_RO) != AIL_ERROR_OK)
 		return AIL_ERROR_DB_FAILED;
 
 	snprintf(q, sizeof(q), "SELECT %s FROM %s", SQL_FLD_APP_INFO_WITH_LOCALNAME, SQL_TBL_APP_INFO_WITH_LOCALNAME);

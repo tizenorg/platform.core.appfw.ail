@@ -35,7 +35,8 @@
 #define OWNER_ROOT 0
 #define GROUP_MENU 6010
 #define BUFSZE 1024
-#define DESKTOP_DIRECTORY "/opt/share/applications"
+#define OPT_DESKTOP_DIRECTORY "/opt/share/applications"
+#define USR_DESKTOP_DIRECTORY "/usr/share/applications"
 #define APP_INFO_DB_FILE "/opt/dbspace/.app_info.db"
 
 #ifdef _E
@@ -175,7 +176,7 @@ static int initdb_change_perm(const char *db_file)
 			return AIL_ERROR_FAIL;
 		}
 
-		ret = chmod(files[i], S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+		ret = chmod(files[i], S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 		if (ret == -1) {
 			strerror_r(errno, buf, sizeof(buf));
 			_E("FAIL : chmod %s 0664, because %s", db_file, buf);
@@ -187,10 +188,30 @@ static int initdb_change_perm(const char *db_file)
 }
 
 
+static int __is_authorized()
+{
+	/* ail_init db should be called by as root privilege. */
+
+	uid_t uid = getuid();
+	if ((uid_t) 0 == uid)
+		return 1;
+	else
+		return 0;
+}
+
 
 int main(int argc, char *argv[])
 {
 	int ret;
+
+	if (!__is_authorized()) {
+		fprintf(stderr, "You are not an authorized user!\n");
+		_D("You are not an authorized user!\n");
+		return AIL_ERROR_FAIL;
+	}
+
+	ret = setenv("AIL_INITDB", "1", 1);
+	_D("AIL_INITDB : %d", ret);
 
 	ret = initdb_count_app();
 	if (ret > 0) {
@@ -198,9 +219,15 @@ int main(int argc, char *argv[])
 		return AIL_ERROR_OK;
 	}
 
-	ret = initdb_load_directory(DESKTOP_DIRECTORY);
+	ret = initdb_load_directory(OPT_DESKTOP_DIRECTORY);
 	if (ret == AIL_ERROR_FAIL) {
-		_E("cannot load directory.");
+		_E("cannot load opt desktop directory.");
+		return AIL_ERROR_FAIL;
+	}
+
+	ret = initdb_load_directory(USR_DESKTOP_DIRECTORY);
+	if (ret == AIL_ERROR_FAIL) {
+		_E("cannot load usr desktop directory.");
 		return AIL_ERROR_FAIL;
 	}
 

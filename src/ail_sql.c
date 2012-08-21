@@ -33,7 +33,7 @@
 static const char *filter[] = {
 	"app_info.PACKAGE='%s'",
 	"app_info.EXEC='%s'",
-	"((localname.name is NULL and app_info.name like '%%%s%%' ESCAPE '|') or (localname.name like '%%%s%%' ESCAPE '|'))",
+	"((localname.name is NULL and app_info.name like '%%%s%%') or (localname.name like '%%%s%%'))",
 	"app_info.TYPE like '%%%s%%'",
 	"app_info.ICON='%s'",
 	"app_info.CATEGORIES like '%%%s%%'",
@@ -46,14 +46,15 @@ static const char *filter[] = {
 	"app_info.X_SLP_URI='%s'",
 	"app_info.X_SLP_SVC like '%%%s%%'",
 	"app_info.X_SLP_EXE_PATH='%s'",
+	"app_info.X_SLP_APPID='%s'",
 	"app_info.X_SLP_BASELAYOUTWIDTH=%d",
-	"app_info.X_SLP_BASELAYOUTHEIGHT=%d",
+	"app_info.X_SLP_INSTALLEDTIME=%d",
 	"app_info.NODISPLAY=%d",
 	"app_info.X_SLP_TASKMANAGE=%d",
 	"app_info.X_SLP_MULTIPLE=%d",
 	"app_info.X_SLP_REMOVABLE=%d",
 	"app_info.X_SLP_ISHORIZONTALSCALE=%d",
-	"app_info.X_SLP_EVENTNOTIFICATIONSETTING=%d",
+	"app_info.X_SLP_INACTIVATED=%d",
 	NULL,
 };
 

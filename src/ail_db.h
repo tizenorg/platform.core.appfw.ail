@@ -30,7 +30,12 @@
 
 #define AIL_SQL_QUERY_MAX_LEN	2048
 
-ail_error_e db_open(void);
+typedef enum {
+	DB_OPEN_RO = 0x0001,
+	DB_OPEN_RW = 0x0002,
+} db_open_mode;
+
+ail_error_e db_open(db_open_mode mode);
 ail_error_e db_prepare(const char *query, sqlite3_stmt **stmt);
 
 ail_error_e db_bind_bool(sqlite3_stmt *stmt, int idx, bool value);
