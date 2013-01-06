@@ -290,13 +290,13 @@ EXPORT_API ail_error_e ail_appinfo_get_bool(const ail_appinfo_h ai, const char *
 
 	if (prop < E_AIL_PROP_BOOL_MIN || prop > E_AIL_PROP_BOOL_MAX)
 		return AIL_ERROR_INVALID_PARAMETER;
-	_D("ail,111:%s\n",ai->stmt);
 	if (ai->stmt) {
 		int index;
 		index = sql_get_app_info_idx(prop);
 		if (db_column_bool(ai->stmt, index, value) < 0)
 			return AIL_ERROR_DB_FAILED;
 	} else {
+		_D("ail,222,%s,%s,%s\n",ai->values[prop],ai->values[1],ai->values[2]);
 		val = atoi(ai->values[prop]);
 		*value = (val == 0? false : true);
 	}
