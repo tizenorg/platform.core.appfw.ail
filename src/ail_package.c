@@ -290,7 +290,7 @@ EXPORT_API ail_error_e ail_appinfo_get_bool(const ail_appinfo_h ai, const char *
 
 	if (prop < E_AIL_PROP_BOOL_MIN || prop > E_AIL_PROP_BOOL_MAX)
 		return AIL_ERROR_INVALID_PARAMETER;
-	
+	_D("ail,111:%s\n",ai->stmt);
 	if (ai->stmt) {
 		int index;
 		index = sql_get_app_info_idx(prop);
