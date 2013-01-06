@@ -241,9 +241,8 @@ EXPORT_API ail_error_e ail_package_get_displayappinfobyexec(const char *exec, ai
 	retv_if(!*ai, AIL_ERROR_OUT_OF_MEMORY);
 
 	snprintf(w, sizeof(w), sql_get_filter(E_AIL_PROP_EXEC_WITHDISPLAY_STR), exec);
-	_D("ail_package_get_displayappinfobyexec query condition: %s\n",w);
 	snprintf(query, sizeof(query), "SELECT %s FROM %s WHERE %s",SQL_FLD_APP_INFO, SQL_TBL_APP_INFO, w);
-	_D("ail_package_get_displayappinfobyexec query: %s\n",query);
+//	_D("ail_package_get_displayappinfobyexec query: %s\n",query);
 
 	do {
 		ret = db_open(DB_OPEN_RO);
