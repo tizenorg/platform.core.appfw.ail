@@ -47,6 +47,7 @@ static const char *filter[] = {
 	"app_info.X_SLP_SVC like '%%%s%%'",
 	"app_info.X_SLP_EXE_PATH='%s'",
 	"app_info.X_SLP_APPID='%s'",
+	"app_info.EXEC='%s' and app_info.NODISPLAY=0",  //add one extra item for the case like /usr/bin/dialer to dialer and phone
 	"app_info.X_SLP_BASELAYOUTWIDTH=%d",
 	"app_info.X_SLP_INSTALLEDTIME=%d",
 	"app_info.NODISPLAY=%d",
