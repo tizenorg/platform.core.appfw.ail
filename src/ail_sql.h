@@ -47,6 +47,7 @@
 			"app_info.X_SLP_SVC," \
 			"app_info.X_SLP_EXE_PATH," \
 			"app_info.X_SLP_APPID," \
+			"''," \ 
 			"app_info.X_SLP_BASELAYOUTWIDTH," \
 			"app_info.X_SLP_INSTALLEDTIME," \
 			"app_info.NODISPLAY," \

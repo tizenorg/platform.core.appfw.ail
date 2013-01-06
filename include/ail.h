@@ -70,6 +70,7 @@ extern "C" {
 #define	AIL_PROP_X_SLP_SVC_STR			"AIL_PROP_X_SLP_SVC_STR"
 #define	AIL_PROP_X_SLP_EXE_PATH			"AIL_PROP_X_SLP_EXE_PATH"
 #define	AIL_PROP_X_SLP_APPID_STR		"AIL_PROP_X_SLP_APPID_STR"
+#define AIL_PROP_EXEC_WITHDISPLAY_STR		"AIL_PROP_EXEC_WITHDISPLAY_STR"
 
 
 /**
@@ -680,7 +681,7 @@ static ail_error_e _get_name(const char *appid)
  */
 ail_error_e ail_get_appinfo(const char *appid, ail_appinfo_h *handle);
 
-
+ail_error_e ail_package_get_displayappinfobyexec(const char *exec, ail_appinfo_h *handle);
 /**
  * @fn ail_error_e ail_appinfo_get_bool(const ail_appinfo_h handle, const char *property, bool *value)
  *
