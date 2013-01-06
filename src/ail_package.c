@@ -77,7 +77,7 @@ static ail_error_e _retrieve_all_column(ail_appinfo_h ai)
 		err = db_column_str(ai->stmt, i, &col);
 		if (AIL_ERROR_OK != err) 
 			break;
-_D("ail,333,%s\n",col);
+
 		if (!col) {
 			ai->values[i] = NULL;
 		} else {
@@ -296,7 +296,6 @@ EXPORT_API ail_error_e ail_appinfo_get_bool(const ail_appinfo_h ai, const char *
 		if (db_column_bool(ai->stmt, index, value) < 0)
 			return AIL_ERROR_DB_FAILED;
 	} else {
-		_D("ail,222,%s,%s,%s\n",ai->values[prop],ai->values[1],ai->values[2]);
 		val = atoi(ai->values[prop]);
 		*value = (val == 0? false : true);
 	}
