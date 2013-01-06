@@ -77,7 +77,7 @@ static ail_error_e _retrieve_all_column(ail_appinfo_h ai)
 		err = db_column_str(ai->stmt, i, &col);
 		if (AIL_ERROR_OK != err) 
 			break;
-
+_D("ail,333,%s\n",col);
 		if (!col) {
 			ai->values[i] = NULL;
 		} else {
