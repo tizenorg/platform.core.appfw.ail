@@ -47,7 +47,7 @@
 			"app_info.X_SLP_SVC," \
 			"app_info.X_SLP_EXE_PATH," \
 			"app_info.X_SLP_APPID," \
-			"''," \    //preseved column for E_AIL_PROP_EXEC_WITHDISPLAY_STR
+			"''," \ 
 			"app_info.X_SLP_BASELAYOUTWIDTH," \
 			"app_info.X_SLP_INSTALLEDTIME," \
 			"app_info.NODISPLAY," \
