@@ -1,0 +1,25 @@
+Source: ail-0
+Section: devel
+Priority: extra
+Maintainer: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>, Jin Yoon <jinny.yoon@samsung.com>, Sunghyuk Lee <sunghyuk.lee@samsung.com>, Jinmin Chung <jinmin@samsung.com>
+Uploaders: Jin Yoon <jinny.yoon@samsung.com>
+Build-Depends: debhelper (>= 5), libvconf-dev, libsqlite3-dev, dlog-dev, libslp-db-util-dev, libglib2.0-dev, libxdgmime-dev
+Homepage: N/A
+Standards-Version: 0.1
+
+Package: libail-0
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Application Information Library
+
+Package: libail-0-dev
+Architecture: any
+Depends: libail-0 (= ${Source-Version}), libsqlite3-dev, dlog-dev, libslp-db-util-dev, libvconf-dev
+Description: Application Information Library
+
+Package: libail-0-dbg
+Section: debug
+Architecture: any
+Depends: libail-0 (= ${Source-Version})
+Description: Application Information Library
+
