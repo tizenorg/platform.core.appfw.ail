@@ -1,0 +1,32 @@
+#!/bin/sh
+CHDBGID="6010"
+
+init_appinfo_db()
+{
+	ail_initdb
+	if [ $? -ne 0 ]; then
+		echo "Failed to initialize app info db"
+	fi
+}
+
+update_DAC_for_db_file()
+{
+	if [ ! -f $@ ]; then
+		touch $@
+	fi
+
+	chown :$CHDBGID $@ 2>/dev/null
+	if [ $? -ne 0 ]; then
+		echo "Failed to change the owner of $@"
+	fi
+	chmod 664 $@ 2>/dev/null
+	if [ $? -ne 0 ]; then
+		echo "Failed to change the perms of $@"
+	fi
+}
+
+init_appinfo_db
+update_DAC_for_db_file /opt/dbspace/.app_info.db
+update_DAC_for_db_file /opt/dbspace/.app_info.db-journal
+
+# End of a file
