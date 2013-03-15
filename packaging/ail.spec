@@ -1,7 +1,7 @@
 #sbs-git:slp/pkgs/a/ail ail 0.2.22 29ac1f2c98453cad647cca6a92abc7da3dbb047b
 Name:       ail
 Summary:    Application Information Library
-Version:    0.2.55
+Version:    0.2.64
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -33,15 +33,16 @@ Application Information Library (devel)
 
 %build
 CFLAGS+=" -fpic"
-cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix} -DBUILD_PKGTYPE=rpm
+%cmake .  -DBUILD_PKGTYPE=rpm
 
 make %{?jobs:-j%jobs}
 
 %install
-rm -rf %{buildroot}
 %make_install
 
 %post
+vconftool set -t string db/ail/ail_info "0" -f
+vconftool set -t string db/menuscreen/desktop "0" -f
 
 CHDBGID="6010"
 
@@ -70,12 +71,12 @@ chsmack -a 'ail::db' /opt/dbspace/.app_info.db*
 
 %files
 %manifest ail.manifest
-/usr/lib/libail.so.0
-/usr/lib/libail.so.0.1.0
+%{_libdir}/libail.so.0
+%{_libdir}/libail.so.0.1.0
 /usr/bin/ail_initdb
 /usr/share/install-info/*
 
 %files devel
 /usr/include/ail.h
-/usr/lib/libail.so
-/usr/lib/pkgconfig/ail.pc
+%{_libdir}/libail.so
+%{_libdir}/pkgconfig/ail.pc

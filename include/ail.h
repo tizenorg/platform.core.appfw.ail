@@ -87,7 +87,8 @@ extern "C" {
 #define	AIL_PROP_X_SLP_TASKMANAGE_BOOL		"AIL_PROP_X_SLP_TASKMANAGE_BOOL"
 #define	AIL_PROP_X_SLP_MULTIPLE_BOOL		"AIL_PROP_X_SLP_MULTIPLE_BOOL"
 #define	AIL_PROP_X_SLP_REMOVABLE_BOOL		"AIL_PROP_X_SLP_REMOVABLE_BOOL"
-#define	AIL_PROP_X_SLP_INACTIVATED_BOOL		"AIL_PROP_X_SLP_INACTIVATED_BOOL"
+#define	AIL_PROP_X_SLP_ISHORIZONTALSCALE_BOOL	"AIL_PROP_X_SLP_ISHORIZONTALSCALE_BOOL"
+#define	AIL_PROP_X_SLP_ENABLED_BOOL		"AIL_PROP_X_SLP_ENABLED_BOOL"
 
 
 /**
@@ -1094,6 +1095,56 @@ static ail_error_e _remove_desktop(const char *appid)
  * @endcode
  */
 ail_error_e ail_desktop_remove(const char *appid);
+
+
+/**
+ * @fn ail_error_e ail_desktop_appinfo_modify_str(const char *appid, const char *property, const char *value, bool broadcast)
+ *
+ * @brief update a app information db.
+	And a notification is published to the applications who want to know about changing DB.
+ *
+ * @par Sync (or) Async : Synchronous API.
+ *
+ * @param[in] appid
+ *
+ * @return 0 if success, negative value(<0) if fail\n
+ * @retval	AIL_ERROR_OK					success
+ * @retval	AIL_ERROR_FAIL					internal error
+ * @retval 	AIL_ERROR_INVALID_PARAMETER		invalid parameter
+ *
+ * @pre no pre-condition.
+ * @post app information is removed in the Application Information Database.
+ *
+ *
+ * @par Prospective Clients:
+ * External Apps.
+ *
+ * @code
+static ail_error_e _appinfo_modify_str(const char *appid, const char *property, const char *value, bool broadcast)
+{
+	ail_error_e ret;
+
+	if (!appid) {
+		return AIL_ERROR_FAIL;
+	}
+	if (!property) {
+		return AIL_ERROR_FAIL;
+	}
+	if (!value) {
+		return AIL_ERROR_FAIL;
+	}
+
+	ret = ail_desktop_appinfo_modify_str(appid, property, value, broadcast);
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+
+	return AIL_ERROR_OK;
+}
+ * @endcode
+ */
+
+ail_error_e ail_desktop_appinfo_modify_str(const char *appid, const char *property, const char *value, bool broadcast);
 
 /** @} */
 

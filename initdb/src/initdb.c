@@ -199,6 +199,38 @@ static int __is_authorized()
 		return 0;
 }
 
+int xsystem(const char *argv[])
+{
+	int status = 0;
+	pid_t pid;
+	pid = fork();
+	switch (pid) {
+	case -1:
+		perror("fork failed");
+		return -1;
+	case 0:
+		/* child */
+		execvp(argv[0], (char *const *)argv);
+		_exit(-1);
+	default:
+		/* parent */
+		break;
+	}
+	if (waitpid(pid, &status, 0) == -1) {
+		perror("waitpid failed");
+		return -1;
+	}
+	if (WIFSIGNALED(status)) {
+		perror("signal");
+		return -1;
+	}
+	if (!WIFEXITED(status)) {
+		/* shouldn't happen */
+		perror("should not happen");
+		return -1;
+	}
+	return WEXITSTATUS(status);
+}
 
 int main(int argc, char *argv[])
 {
@@ -209,6 +241,9 @@ int main(int argc, char *argv[])
 		_D("You are not an authorized user!\n");
 		return AIL_ERROR_FAIL;
 	}
+
+	const char *argv_bin[] = { "/bin/rm", APP_INFO_DB_FILE, NULL };
+	xsystem(argv_bin);
 
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);

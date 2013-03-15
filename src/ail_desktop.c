@@ -36,6 +36,7 @@
 
 #include "ail_private.h"
 #include "ail_db.h"
+#include "ail_sql.h"
 #include "ail.h"
 
 #define OPT_DESKTOP_DIRECTORY "/opt/share/applications"
@@ -109,7 +110,7 @@ typedef struct {
 	int		x_slp_multiple;
 	int		x_slp_removable;
 	int		x_slp_ishorizontalscale;
-	int		x_slp_inactivated;
+	int		x_slp_enabled;
 	char*		desktop;
 	GSList*		localname;
 } desktop_info_s;
@@ -598,6 +599,19 @@ static ail_error_e _read_x_slp_domain(void *data, char *tag, char *value)
 }
 
 
+static ail_error_e _read_x_slp_enabled(void *data, char *tag, char *value)
+{
+	desktop_info_s *info = data;
+
+	retv_if(!data, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
+
+	info->x_slp_enabled = !strcasecmp(value, "true");
+
+	return AIL_ERROR_OK;
+}
+
+
 static struct entry_parser entry_parsers[] = {
 	{
 		.field = "exec",
@@ -660,6 +674,10 @@ static struct entry_parser entry_parsers[] = {
 		.value_cb = _read_x_slp_taskmanage,
 	},
 	{
+		.field = "x-tizen-enabled",
+		.value_cb = _read_x_slp_enabled,
+	},
+	{
 		.field = "x-tizen-multiple",
 		.value_cb = _read_x_slp_multiple,
 	},
@@ -677,6 +695,10 @@ static struct entry_parser entry_parsers[] = {
 	},
 	{
 		.field = "x-tizen-domain",
+		.value_cb = _read_x_slp_domain,
+	},
+	{
+		.field = "x-tizen-enabled",
 		.value_cb = _read_x_slp_domain,
 	},
 	{
@@ -801,6 +823,8 @@ static ail_error_e _init_desktop_info(desktop_info_s *info, const char *package)
 	info->x_slp_appid = strdup(package);
 	retv_if(!info->x_slp_appid, AIL_ERROR_OUT_OF_MEMORY);
 
+	info->x_slp_enabled = 1;
+
 	info->desktop = _pkgname_to_desktop(package);
 	retv_if(!info->desktop, AIL_ERROR_FAIL);
 
@@ -872,6 +896,114 @@ NEXT:
 }
 
 
+static ail_error_e _retrieve_all_column_to_desktop_info(desktop_info_s* info, sqlite3_stmt *stmt)
+{
+	int i, j;
+	ail_error_e err;
+	char **values;
+	char *col;
+
+	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
+
+	values = calloc(NUM_OF_PROP, sizeof(char *));
+	retv_if(!values, AIL_ERROR_OUT_OF_MEMORY);
+
+	for (i = 0; i < NUM_OF_PROP; i++) {
+		err = db_column_str(stmt, i, &col);
+		if (AIL_ERROR_OK != err)
+			break;
+
+		if (!col) {
+			values[i] = NULL;
+		} else {
+			values[i] = strdup(col);
+			if (!values[i]) {
+				err = AIL_ERROR_OUT_OF_MEMORY;
+				goto NEXT;
+			}
+		}
+	}
+
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_EXEC_STR], info->exec);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_NAME_STR], info->name);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_TYPE_STR], info->type);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_ICON_STR], info->icon);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_CATEGORIES_STR], info->categories);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_VERSION_STR], info->version);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_MIMETYPE_STR], info->mimetype);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_SERVICE_STR], info->x_slp_service);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_PACKAGETYPE_STR], info->x_slp_packagetype);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_PACKAGECATEGORIES_STR], info->x_slp_packagecategories);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_PACKAGEID_STR], info->x_slp_packageid);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_URI_STR], info->x_slp_uri);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_SVC_STR], info->x_slp_svc);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_EXE_PATH], info->x_slp_exe_path);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_APPID_STR], info->x_slp_appid);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_PKGID_STR], info->x_slp_pkgid);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_DOMAIN_STR], info->x_slp_domain);
+
+	info->x_slp_installedtime = atoi(values[E_AIL_PROP_X_SLP_INSTALLEDTIME_INT]);
+
+	info->nodisplay = atoi(values[E_AIL_PROP_NODISPLAY_BOOL]);
+	info->x_slp_taskmanage = atoi(values[E_AIL_PROP_X_SLP_TASKMANAGE_BOOL]);
+	info->x_slp_multiple = atoi(values[E_AIL_PROP_X_SLP_MULTIPLE_BOOL]);
+	info->x_slp_removable = atoi(values[E_AIL_PROP_X_SLP_REMOVABLE_BOOL]);
+	info->x_slp_ishorizontalscale = atoi(values[E_AIL_PROP_X_SLP_ISHORIZONTALSCALE_BOOL]);
+	info->x_slp_enabled = atoi(values[E_AIL_PROP_X_SLP_ENABLED_BOOL]);
+
+	err = AIL_ERROR_OK;
+
+NEXT:
+	for (j = 0; j < i; ++j) {
+		if (values[j])
+			free(values[j]);
+	}
+	if (values)
+		free(values);
+	return err;
+}
+
+
+static ail_error_e _load_desktop_info(desktop_info_s* info)
+{
+	ail_error_e ret;
+	char query[AIL_SQL_QUERY_MAX_LEN];
+	sqlite3_stmt *stmt = NULL;
+	char w[AIL_SQL_QUERY_MAX_LEN];
+
+	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
+
+	snprintf(w, sizeof(w), sql_get_filter(E_AIL_PROP_X_SLP_APPID_STR), info->package);
+
+	snprintf(query, sizeof(query), "SELECT %s FROM %s WHERE %s",SQL_FLD_APP_INFO, SQL_TBL_APP_INFO, w);
+
+	do {
+		ret = db_open(DB_OPEN_RO);
+		if (ret < 0) break;
+
+		ret = db_prepare(query, &stmt);
+		if (ret < 0) break;
+
+		ret = db_step(stmt);
+		if (ret < 0) {
+			db_finalize(stmt);
+			break;
+		}
+
+		ret = _retrieve_all_column_to_desktop_info(info, stmt);
+		if (ret < 0) {
+			db_finalize(stmt);
+			break;
+		}
+
+		ret = db_finalize(stmt);
+		if (ret < 0) break;
+
+		return AIL_ERROR_OK;
+	} while(0);
+
+	return ret;
+}
 
 static ail_error_e _modify_desktop_info_bool(desktop_info_s* info,
 						  const char *property,
@@ -889,8 +1021,8 @@ static ail_error_e _modify_desktop_info_bool(desktop_info_s* info,
 		return AIL_ERROR_INVALID_PARAMETER;
 
 	switch (prop) {
-		case E_AIL_PROP_X_SLP_INACTIVATED_BOOL:
-			info->x_slp_inactivated = (int)value;
+		case E_AIL_PROP_X_SLP_ENABLED_BOOL:
+			info->x_slp_enabled = (int)value;
 			break;
 		default:
 			return AIL_ERROR_FAIL;
@@ -898,6 +1030,35 @@ static ail_error_e _modify_desktop_info_bool(desktop_info_s* info,
 
 	return AIL_ERROR_OK;
 }
+
+
+static ail_error_e _modify_desktop_info_str(desktop_info_s* info,
+						  const char *property,
+						  const char *value)
+{
+	ail_prop_bool_e prop;
+	int val;
+
+	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!property, AIL_ERROR_INVALID_PARAMETER);
+
+	prop = _ail_convert_to_prop_str(property);
+
+	if (prop < E_AIL_PROP_STR_MIN || prop > E_AIL_PROP_STR_MAX)
+		return AIL_ERROR_INVALID_PARAMETER;
+
+	switch (prop) {
+		case E_AIL_PROP_NAME_STR:
+			SAFE_FREE_AND_STRDUP(value, info->name);
+			retv_if (!info->name, AIL_ERROR_OUT_OF_MEMORY);
+			break;
+		default:
+			return AIL_ERROR_FAIL;
+	}
+
+	return AIL_ERROR_OK;
+}
+
 
 
 
@@ -932,7 +1093,7 @@ static ail_error_e _create_table(void)
 		"x_slp_multiple INTEGER DEFAULT 0, "
 		"x_slp_removable INTEGER DEFAULT 1, "
 		"x_slp_ishorizontalscale INTEGER DEFAULT 0, "
-		"x_slp_inactivated INTEGER DEFAULT 0, "
+		"x_slp_enabled INTEGER DEFAULT 1, "
 		"desktop TEXT UNIQUE NOT NULL);",
 		"CREATE TABLE localname (package TEXT NOT NULL, "
 		"locale TEXT NOT NULL, "
@@ -1001,7 +1162,7 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 		"x_slp_multiple, "
 		"x_slp_removable, "
 		"x_slp_ishorizontalscale, "
-		"x_slp_inactivated, "
+		"x_slp_enabled, "
 		"desktop) "
 		"values "
 		"('%q', '%q', '%q', '%q', '%q', "
@@ -1036,7 +1197,7 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 		info->x_slp_multiple,
 		info->x_slp_removable,
 		info->x_slp_ishorizontalscale,
-		info->x_slp_inactivated,
+		info->x_slp_enabled,
 		info->desktop
 		);
 
@@ -1100,7 +1261,7 @@ static ail_error_e _update_desktop_info(desktop_info_s *info)
 		"x_slp_multiple=%d, "
 		"x_slp_removable=%d, "
 		"x_slp_ishorizontalscale=%d, "
-		"x_slp_inactivated=%d, "
+		"x_slp_enabled=%d, "
 		"desktop='%q'"
 		"where package='%q'",
 		info->exec,
@@ -1127,7 +1288,7 @@ static ail_error_e _update_desktop_info(desktop_info_s *info)
 		info->x_slp_multiple,
 		info->x_slp_removable,
 		info->x_slp_ishorizontalscale,
-		info->x_slp_inactivated,
+		info->x_slp_enabled,
 		info->desktop,
 		info->package);
 
@@ -1219,7 +1380,8 @@ static ail_error_e _send_db_done_noti(noti_type type, const char *package)
 	retv_if(!noti_string, AIL_ERROR_OUT_OF_MEMORY);
 
 	snprintf(noti_string, size, "%s:%s", type_string, package);
-	vconf_set_str("memory/menuscreen/desktop", noti_string);
+	vconf_set_str(VCONFKEY_AIL_INFO_STATE, noti_string);
+	vconf_set_str(VCONFKEY_MENUSCREEN_DESKTOP, noti_string); // duplicate, will be removed
 	_D("Noti : %s", noti_string);
 
 	free(noti_string);
@@ -1257,6 +1419,8 @@ static void _fini_desktop_info(desktop_info_s *info)
 	SAFE_FREE(info->x_slp_svc);
 	SAFE_FREE(info->x_slp_exe_path);
 	SAFE_FREE(info->x_slp_appid);
+	SAFE_FREE(info->x_slp_pkgid);
+	SAFE_FREE(info->x_slp_domain);
 	SAFE_FREE(info->desktop);
 	if (info->localname) {
 		g_slist_free_full(info->localname, _name_item_free_func);
@@ -1266,6 +1430,14 @@ static void _fini_desktop_info(desktop_info_s *info)
 	return;
 }
 
+static int __is_authorized()
+{
+	uid_t uid = getuid();
+	if ((uid_t) 0 == uid )
+		return 1;
+	else
+		return 0;
+}
 
 
 /* Public functions */
@@ -1276,6 +1448,10 @@ EXPORT_API ail_error_e ail_desktop_add(const char *appid)
 	int count;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
+	if (!__is_authorized()) {
+		_E("You are not an authorized user on adding!\n");
+		return -1;
+	}
 
 	count = _count_all();
 	if (count <= 0) {
@@ -1310,6 +1486,10 @@ EXPORT_API ail_error_e ail_desktop_update(const char *appid)
 	ail_error_e ret;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
+	if (!__is_authorized()) {
+		_E("You are not an authorized user on updating!\n");
+		return -1;
+	}
 
 	ret = _init_desktop_info(&info, appid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
@@ -1335,6 +1515,10 @@ EXPORT_API ail_error_e ail_desktop_remove(const char *appid)
 	ail_error_e ret;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
+	if (!__is_authorized()) {
+		_E("You are not an authorized user on removing!\n");
+		return -1;
+	}
 
 	ret = _remove_package(appid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
@@ -1346,20 +1530,23 @@ EXPORT_API ail_error_e ail_desktop_remove(const char *appid)
 }
 
 
-EXPORT_API ail_error_e ail_desktop_appinfo_modify_bool(const char *package,
+EXPORT_API ail_error_e ail_desktop_appinfo_modify_bool(const char *appid,
 							     const char *property,
-							     bool value)
+							     bool value,
+							     bool broadcast)
 {
 	desktop_info_s info = {0,};
 	ail_error_e ret;
-	ail_prop_bool_e prop;
 
-	retv_if(!package, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
 
-	retv_if(strcmp(property, AIL_PROP_X_SLP_INACTIVATED_BOOL),
+	retv_if(strcmp(property, AIL_PROP_X_SLP_ENABLED_BOOL),
 		AIL_ERROR_INVALID_PARAMETER);
 
-	ret = _init_desktop_info(&info, package);
+	ret = _init_desktop_info(&info, appid);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+
+	ret = _load_desktop_info(&info);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
 	ret = _modify_desktop_info_bool(&info, property, value);
@@ -1368,8 +1555,10 @@ EXPORT_API ail_error_e ail_desktop_appinfo_modify_bool(const char *package,
 	ret = _update_desktop_info(&info);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
-	ret = _send_db_done_noti(NOTI_UPDATE, package);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (broadcast) {
+		ret = _send_db_done_noti(NOTI_UPDATE, appid);
+		retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	}
 
 	_fini_desktop_info(&info);
 
@@ -1377,6 +1566,41 @@ EXPORT_API ail_error_e ail_desktop_appinfo_modify_bool(const char *package,
 }
 
 
+EXPORT_API ail_error_e ail_desktop_appinfo_modify_str(const char *appid,
+							     const char *property,
+							     const char *value,
+							     bool broadcast)
+{
+	desktop_info_s info = {0,};
+	ail_error_e ret;
 
+	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
+
+	retv_if(strcmp(property, AIL_PROP_NAME_STR),
+		AIL_ERROR_INVALID_PARAMETER);
+
+	ret = _init_desktop_info(&info, appid);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+
+	ret = _load_desktop_info(&info);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+
+	_D("info.name [%s], value [%s]", info.name, value);
+	ret = _modify_desktop_info_str(&info, property, value);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	_D("info.name [%s], value [%s]", info.name, value);
+
+	ret = _update_desktop_info(&info);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+
+	if (broadcast) {
+		ret = _send_db_done_noti(NOTI_UPDATE, appid);
+		retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	}
+
+	_fini_desktop_info(&info);
+
+	return AIL_ERROR_OK;
+}
 
 // End of File

@@ -56,7 +56,7 @@
 			"app_info.X_SLP_MULTIPLE," \
 			"app_info.X_SLP_REMOVABLE," \
 			"app_info.X_SLP_ISHORIZONTALSCALE," \
-			"app_info.X_SLP_INACTIVATED" \
+			"app_info.X_SLP_ENABLED" \
 
 
 #define SQL_FLD_APP_INFO_WITH_LOCALNAME SQL_FLD_APP_INFO",""localname.name"

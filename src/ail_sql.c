@@ -56,7 +56,7 @@ static const char *filter[] = {
 	"app_info.X_SLP_MULTIPLE=%d",
 	"app_info.X_SLP_REMOVABLE=%d",
 	"app_info.X_SLP_ISHORIZONTALSCALE=%d",
-	"app_info.X_SLP_INACTIVATED=%d",
+	"app_info.X_SLP_ENABLED=%d",
 	NULL,
 };
 
