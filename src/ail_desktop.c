@@ -1052,6 +1052,10 @@ static ail_error_e _modify_desktop_info_str(desktop_info_s* info,
 			SAFE_FREE_AND_STRDUP(value, info->name);
 			retv_if (!info->name, AIL_ERROR_OUT_OF_MEMORY);
 			break;
+		case E_AIL_PROP_X_SLP_SVC_STR:
+			SAFE_FREE_AND_STRDUP(value, info->x_slp_svc);
+			retv_if (!info->x_slp_svc, AIL_ERROR_OUT_OF_MEMORY);
+			break;
 		default:
 			return AIL_ERROR_FAIL;
 	}
@@ -1575,9 +1579,6 @@ EXPORT_API ail_error_e ail_desktop_appinfo_modify_str(const char *appid,
 	ail_error_e ret;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
-
-	retv_if(strcmp(property, AIL_PROP_NAME_STR),
-		AIL_ERROR_INVALID_PARAMETER);
 
 	ret = _init_desktop_info(&info, appid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);

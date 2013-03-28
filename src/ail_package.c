@@ -491,5 +491,9 @@ EXPORT_API ail_error_e ail_appinfo_get_str(const ail_appinfo_h ai, const char *p
 	return AIL_ERROR_OK;
 }
 
+EXPORT_API ail_error_e ail_close_appinfo_db(void)
+{
+	return db_close();
+}
 
 // End of file

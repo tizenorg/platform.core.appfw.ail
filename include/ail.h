@@ -958,6 +958,60 @@ static ail_error_e _get_name(const char *appid)
  */
 ail_error_e ail_destroy_appinfo(const ail_appinfo_h handle);
 
+/**
+ * @fn ail_error_e ail_close_appinfo_db(void)
+ *
+ * @brief close appinfo db.
+ *
+ * @par Sync (or) Async : Synchronous API.
+ *
+ * @return 0 if success, negative value(<0) if fail\n
+ * @retval	AIL_ERROR_OK					success
+ * @retval	AIL_ERROR_DB_FAILED				database error
+ * @retval	AIL_ERROR_INVALID_PARAMETER		invalid parameter
+ *
+ * @pre need a handle that you don't need anymore.
+ * @post cannot use the handle after destroying.
+ *
+ * @see  ail_get_appinfo(), ail_appinfo_get_bool(), ail_appinfo_get_int(), ail_appinfo_get_str()
+ *
+ * @par Prospective Clients:
+ * External Apps.
+ *
+ * @code
+static ail_error_e _get_name(const char *appid)
+{
+	ail_appinfo_h handle;
+	ail_error_e ret;
+	char *str;
+
+	ret = ail_get_appinfo(appid, &handle);
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+
+	ret = ail_appinfo_get_str(handle, AIL_PROP_NAME_STR, &str);
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+	fprintf(stderr, "Package[%s], Property[%s] : %s\n", appid, property, str);
+
+	ret = ail_destroy_appinfo(handle);
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+
+	ret = ail_close_appinfo_db();
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+
+	return AIL_ERROR_OK;
+}
+ * @endcode
+ */
+ail_error_e ail_close_appinfo_db(void);
+
 
 /**
  * @fn ail_error_e ail_desktop_add(const char *appid)
