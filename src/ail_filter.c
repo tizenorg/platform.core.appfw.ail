@@ -86,6 +86,7 @@ EXPORT_API ail_error_e ail_filter_destroy(ail_filter_h filter)
 	}
 
 	free(filter);
+	db_close();
 
 	return AIL_ERROR_OK;
 }

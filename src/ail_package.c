@@ -250,6 +250,7 @@ EXPORT_API ail_error_e ail_destroy_appinfo(ail_appinfo_h ai)
 
 	free(ai->values);
 	free(ai);
+	db_close();
 
 	return AIL_ERROR_OK;
 }

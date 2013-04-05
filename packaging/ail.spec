@@ -1,7 +1,7 @@
 #sbs-git:slp/pkgs/a/ail ail 0.2.22 29ac1f2c98453cad647cca6a92abc7da3dbb047b
 Name:       ail
 Summary:    Application Information Library
-Version:    0.2.67
+Version:    0.2.68
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -15,7 +15,6 @@ BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(db-util)
 BuildRequires:  pkgconfig(xdgmime)
-
 
 %description
 Application Information Library
