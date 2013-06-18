@@ -1,7 +1,7 @@
 #sbs-git:slp/pkgs/a/ail ail 0.2.22 29ac1f2c98453cad647cca6a92abc7da3dbb047b
 Name:       ail
 Summary:    Application Information Library
-Version:    0.2.68
+Version:    0.2.72
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -40,8 +40,8 @@ make %{?jobs:-j%jobs}
 %make_install
 
 %post
-vconftool set -t string db/ail/ail_info "0" -f
-vconftool set -t string db/menuscreen/desktop "0" -f
+vconftool set -t string db/ail/ail_info "0" -f -s system::vconf_inhouse
+vconftool set -t string db/menuscreen/desktop "0" -f -s system::vconf_inhouse
 
 CHDBGID="6010"
 

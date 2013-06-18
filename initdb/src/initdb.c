@@ -38,6 +38,8 @@
 #define OPT_DESKTOP_DIRECTORY "/opt/share/applications"
 #define USR_DESKTOP_DIRECTORY "/usr/share/applications"
 #define APP_INFO_DB_FILE "/opt/dbspace/.app_info.db"
+#define APP_INFO_DB_FILE_JOURNAL "/opt/dbspace/.app_info.db-journal"
+#define APP_INFO_DB_LABEL "ail::db"
 
 #ifdef _E
 #undef _E
@@ -242,8 +244,10 @@ int main(int argc, char *argv[])
 		return AIL_ERROR_FAIL;
 	}
 
-	const char *argv_bin[] = { "/bin/rm", APP_INFO_DB_FILE, NULL };
-	xsystem(argv_bin);
+	const char *argv_rm[] = { "/bin/rm", APP_INFO_DB_FILE, NULL };
+	xsystem(argv_rm);
+	const char *argv_rmjn[] = { "/bin/rm", APP_INFO_DB_FILE_JOURNAL, NULL };
+	xsystem(argv_rmjn);
 
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);
@@ -271,6 +275,11 @@ int main(int argc, char *argv[])
 		_E("cannot chown.");
 		return AIL_ERROR_FAIL;
 	}
+
+	const char *argv_smack[] = { "/usr/bin/chsmack", "-a", APP_INFO_DB_LABEL, APP_INFO_DB_FILE, NULL };
+	xsystem(argv_smack);
+	const char *argv_smackjn[] = { "/usr/bin/chsmack", "-a", APP_INFO_DB_LABEL, APP_INFO_DB_FILE_JOURNAL, NULL };
+	xsystem(argv_smackjn);
 
 	return AIL_ERROR_OK;
 }
