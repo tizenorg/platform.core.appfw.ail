@@ -39,9 +39,13 @@ make %{?jobs:-j%jobs}
 %install
 %make_install
 
+mkdir -p %{buildroot}/opt/dbspace/
+mkdir -p %{buildroot}/opt/share/applications/
+
 %post
 vconftool set -t string db/ail/ail_info "0" -f
 vconftool set -t string db/menuscreen/desktop "0" -f
+vconftool set -t string db/menu_widget/language "US" -f
 
 CHDBGID="6010"
 
@@ -60,18 +64,19 @@ update_DAC_for_db_file()
                 echo "Failed to change the perms of $@"
         fi
 }
-mkdir -p /opt/dbspace/
 ail_initdb
 update_DAC_for_db_file /opt/dbspace/.app_info.db
 update_DAC_for_db_file /opt/dbspace/.app_info.db-journal
-chsmack -a 'ail::db' /opt/dbspace/.app_info.db*
 
 %postun
+rm -f /opt/dbspace/.app_info.db*
 
 %files
 %manifest ail.manifest
 %{_libdir}/libail.so.0
 %{_libdir}/libail.so.0.1.0
+/opt/dbspace
+/opt/share/applications
 /usr/bin/ail_initdb
 /usr/share/install-info/*
 
