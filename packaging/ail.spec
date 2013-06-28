@@ -6,6 +6,7 @@ Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
 Source0:    %{name}-%{version}.tar.gz
+Source1001: 	ail.manifest
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 BuildRequires:  cmake
@@ -29,6 +30,7 @@ Application Information Library (devel)
 
 %prep
 %setup -q
+cp %{SOURCE1001} .
 
 %build
 CFLAGS+=" -fpic"
@@ -74,7 +76,7 @@ rm -f /opt/dbspace/.app_info.db*
 fi
 
 %files
-%manifest ail.manifest
+%manifest %{name}.manifest
 %{_libdir}/libail.so.0
 %{_libdir}/libail.so.0.1.0
 /opt/dbspace
@@ -83,6 +85,7 @@ fi
 /usr/share/install-info/*
 
 %files devel
+%manifest %{name}.manifest
 /usr/include/ail.h
 %{_libdir}/libail.so
 %{_libdir}/pkgconfig/ail.pc
