@@ -69,7 +69,9 @@ update_DAC_for_db_file /opt/dbspace/.app_info.db
 update_DAC_for_db_file /opt/dbspace/.app_info.db-journal
 
 %postun
+if [ $1 == 0 ]; then
 rm -f /opt/dbspace/.app_info.db*
+fi
 
 %files
 %manifest ail.manifest
