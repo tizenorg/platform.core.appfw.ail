@@ -1,3 +1,6 @@
+* Tue Jul 09 2013 Baptiste DURAND <baptiste.durand@eurogiciel.fr> accepted/tizen/20130628.165836@f5fdef3
+- Improve performence of app_info.db creation/insertion of a package in app_info.db
+
 * Fri Jun 28 2013 Baptiste DURAND <baptiste.durand@eurogiciel.fr> accepted/tizen/20130627.044239@e0cb252
 - manage package update.
 

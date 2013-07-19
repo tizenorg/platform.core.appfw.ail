@@ -46,6 +46,14 @@
 #define whitespace(c) (((c) == ' ') || ((c) == '\t'))
 #define argsdelimiter	" \t"
 
+#define SQL_INSERT_LOCALNAME_STR "insert into localname (package, locale, name) values "
+#define SQL_INSERT_LOCALNAME_STR_LEN (sizeof(SQL_INSERT_LOCALNAME_STR)-1)
+
+#define SQL_INSERT_LOCALNAME_INIT_STR  SQL_INSERT_LOCALNAME_STR"( ?, ?, ?) "
+
+#define SQL_LOCALNAME_TRIPLET_STR  ", ( ?, ?, ?)"
+#define SQL_LOCALNAME_TRIPLET_STR_LEN (sizeof(SQL_LOCALNAME_TRIPLET_STR)-1)
+
 typedef enum {
 	NOTI_ADD,
 	NOTI_UPDATE,
@@ -749,7 +757,97 @@ char *_pkgname_to_desktop(const char *package)
 	return desktop;
 }
 
+static inline int _bind_local_info(desktop_info_s* info, sqlite3_stmt * stmt)
+{
+	int ret = 0;
+	unsigned long i = 0;
+	struct name_item *item;
+	GSList*	localname;
+	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!info->localname, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+	localname = info->localname;
+	while (localname) {
+		item = (struct name_item *)	localname->data;
+		if (item && item->locale && item->name)	{
+			// Bind values for a triplet : package, locale, name
+			retv_if(db_bind_text(stmt, i+1, info->package) != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
+			retv_if(db_bind_text(stmt, i+2, item->locale) != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
+			retv_if(db_bind_text(stmt, i+3, item->name) != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
+			i += 3;
+		}
+		localname = g_slist_next(localname);
+	}
+	return AIL_ERROR_OK;
+}
 
+
+static inline int _len_local_info(desktop_info_s* info)
+{
+	int len = 0;
+	struct name_item *item;
+	GSList*	localname;
+	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
+	if(info->localname)	{
+		localname = info->localname;
+		while (localname) {
+			item = (struct name_item *)	localname->data;
+			if (item && item->locale && item->name)
+				len ++;
+			localname = g_slist_next(localname);
+		}
+	}
+	return len;
+}
+
+
+static inline int _insert_local_info(desktop_info_s* info)
+{
+	int len_query = SQL_INSERT_LOCALNAME_STR_LEN;
+	int nb_locale_args;
+	char *query;
+	int ret = AIL_ERROR_OK;
+	sqlite3_stmt *stmt = NULL;
+	int i = 0;
+	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!info->localname, AIL_ERROR_INVALID_PARAMETER);
+
+	nb_locale_args = _len_local_info(info);
+
+	retv_if(!nb_locale_args, AIL_ERROR_INVALID_PARAMETER);
+
+	len_query += SQL_LOCALNAME_TRIPLET_STR_LEN*nb_locale_args +1;
+
+	query = (char *) malloc(len_query);
+	retv_if(!query, AIL_ERROR_OUT_OF_MEMORY);
+	stpncpy(query, SQL_INSERT_LOCALNAME_INIT_STR, len_query);
+	for (i = 0; i <  nb_locale_args - 1; i++)
+		strcat(query, SQL_LOCALNAME_TRIPLET_STR);
+
+	do {
+		ret = db_prepare_rw(query, &stmt);
+		if (ret < 0) break;
+
+		ret = _bind_local_info(info, stmt);
+		if (ret < 0) {
+			_E("Can't bind locale information to this query - %s. ",query);
+			db_finalize(stmt);
+			break;
+		}
+		ret = db_step(stmt);
+		if (ret != AIL_ERROR_NO_DATA) {
+			/* Insert Request doesn't return any data.
+			 * db_step should returns AIL_ERROR_NO_DATA in this case. */
+			_E("Can't execute this query - %s. ",query);
+			db_finalize(stmt);
+			break;
+		}
+		ret = db_finalize(stmt);
+	} while(0);
+
+	free(query);
+	return ret;
+}
 
 static inline int _strlen_desktop_info(desktop_info_s* info)
 {
@@ -1213,10 +1311,11 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 	}
 
 	ret = db_exec(query);
+	free(query);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
 
 	if (info->localname)
-		g_slist_foreach(info->localname, _insert_localname, info);
+		_insert_local_info(info);
 
 	_D("Add (%s).", info->package);
 
@@ -1309,7 +1408,7 @@ static ail_error_e _update_desktop_info(desktop_info_s *info)
 	}
 
 	if (info->localname)
-		g_slist_foreach(info->localname, _insert_localname, info);
+		_insert_local_info(info);
 
 	_D("Update (%s).", info->package);
 

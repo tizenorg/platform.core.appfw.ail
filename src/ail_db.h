@@ -38,9 +38,11 @@ typedef int (*sqlite_query_callback)(void *data, int ncols, char **coltxt, char 
 
 ail_error_e db_open(db_open_mode mode);
 ail_error_e db_prepare(const char *query, sqlite3_stmt **stmt);
+ail_error_e db_prepare_rw(const char *query, sqlite3_stmt **stmt);
 
 ail_error_e db_bind_bool(sqlite3_stmt *stmt, int idx, bool value);
 ail_error_e db_bind_int(sqlite3_stmt *stmt, int idx, int value);
+ail_error_e db_bind_text(sqlite3_stmt *stmt, int idx, char* value);
 
 ail_error_e db_step(sqlite3_stmt *stmt);
 

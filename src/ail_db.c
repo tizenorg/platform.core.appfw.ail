@@ -46,6 +46,23 @@ static __thread struct {
 	.dbrw = NULL
 };
 
+
+static ail_error_e db_do_prepare(sqlite3 *db, const char *query, sqlite3_stmt **stmt)
+{
+	int ret;
+
+	retv_if(!query, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!db, AIL_ERROR_DB_FAILED);
+
+	ret = sqlite3_prepare_v2(db, query, strlen(query), stmt, NULL);
+	if (ret != SQLITE_OK) {
+		_E("%s\n", sqlite3_errmsg(db));
+		return AIL_ERROR_DB_FAILED;
+	} else
+		return AIL_ERROR_OK;
+}
+
 ail_error_e db_open(db_open_mode mode)
 {
 	int ret;
@@ -70,22 +87,14 @@ ail_error_e db_open(db_open_mode mode)
 	return AIL_ERROR_OK;
 }
 
-
-
 ail_error_e db_prepare(const char *query, sqlite3_stmt **stmt)
 {
-	int ret;
+	return db_do_prepare(db_info.dbro, query, stmt);
+}
 
-	retv_if(!query, AIL_ERROR_INVALID_PARAMETER);
-	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
-	retv_if(!db_info.dbro, AIL_ERROR_DB_FAILED);
-
-	ret = sqlite3_prepare_v2(db_info.dbro, query, strlen(query), stmt, NULL);
-	if (ret != SQLITE_OK) {
-		_E("%s\n", sqlite3_errmsg(db_info.dbro));
-		return AIL_ERROR_DB_FAILED;
-	} else 
-		return AIL_ERROR_OK;
+ail_error_e db_prepare_rw(const char *query, sqlite3_stmt **stmt)
+{
+	return db_do_prepare(db_info.dbrw, query, stmt);
 }
 
 
@@ -115,6 +124,17 @@ ail_error_e db_bind_int(sqlite3_stmt *stmt, int idx, int value)
 	return AIL_ERROR_OK;
 }
 
+ail_error_e db_bind_text(sqlite3_stmt *stmt, int idx, char* value)
+{
+	int ret;
+
+	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+
+	ret = sqlite3_bind_text(stmt, idx, value, strlen(value), 0);
+	retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+
+	return AIL_ERROR_OK;
+}
 
 
 ail_error_e db_step(sqlite3_stmt *stmt)
