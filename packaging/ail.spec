@@ -47,7 +47,7 @@ mkdir -p %{buildroot}/opt/share/applications/
 %post
 vconftool set -t string db/ail/ail_info "0" -f
 vconftool set -t string db/menuscreen/desktop "0" -f
-vconftool set -t string db/menu_widget/language "US" -f
+vconftool set -t string db/menu_widget/language "en_US.utf8" -f
 
 CHDBGID="6010"
 
