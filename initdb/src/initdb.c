@@ -182,7 +182,7 @@ static int initdb_change_perm(const char *db_file)
 			return AIL_ERROR_FAIL;
 		}
 
-		ret = chmod(files[i], S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+		ret = chmod(files[i], S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 		if (ret == -1) {
 			strerror_r(errno, buf, sizeof(buf));
 			_E("FAIL : chmod %s 0664, because %s", db_file, buf);
