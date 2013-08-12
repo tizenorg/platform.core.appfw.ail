@@ -234,7 +234,7 @@ char *_get_where_clause(ail_filter_h filter)
 		}
 	}
 
-	_D("where = %s", w);
+//	_D("where = %s", w);
 
 	return strdup(w);
 }
@@ -276,9 +276,10 @@ EXPORT_API ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *cnt)
 		free(w);
 	}
 
-	_D("Query = %s",q);
+//	_D("Query = %s",q);
 
 	if (db_prepare(q, &stmt) != AIL_ERROR_OK) {
+		_E("db_prepare fail for query = %s",q);
 		return AIL_ERROR_DB_FAILED;
 	}
 
@@ -336,9 +337,10 @@ EXPORT_API ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_
 	else
 		_D("No filter exists. All records are retreived");
 
-	_D("Query = %s",q);
+//	_D("Query = %s",q);
 
 	if (db_prepare(q, &stmt) != AIL_ERROR_OK) {
+		_E("db_prepare fail for query = %s",q);
 		return AIL_ERROR_DB_FAILED;
 	}
 

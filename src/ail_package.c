@@ -377,7 +377,7 @@ char *appinfo_get_localname(const char *package, char *locale)
 	
 	snprintf(query, sizeof(query), QUERY_GET_LOCALNAME, package, locale);
 
-	_D("Query = %s",query);
+//	_D("Query = %s",query);
 	retv_if (db_prepare(query, &stmt) < 0, NULL);
 
 	do {

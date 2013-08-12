@@ -175,14 +175,14 @@ static int initdb_change_perm(const char *db_file)
 	snprintf(journal_file, sizeof(journal_file), "%s%s", db_file, "-journal");
 
 	for (i = 0; files[i]; i++) {
-		ret = chown(files[i], OWNER_ROOT, GROUP_MENU);
+		ret = chown(files[i], OWNER_ROOT, OWNER_ROOT);
 		if (ret == -1) {
 			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", db_file, OWNER_ROOT, GROUP_MENU, buf);
+			_E("FAIL : chown %s %d.%d, because %s", db_file, OWNER_ROOT, OWNER_ROOT, buf);
 			return AIL_ERROR_FAIL;
 		}
 
-		ret = chmod(files[i], S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+		ret = chmod(files[i], S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 		if (ret == -1) {
 			strerror_r(errno, buf, sizeof(buf));
 			_E("FAIL : chmod %s 0664, because %s", db_file, buf);
