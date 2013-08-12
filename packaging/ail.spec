@@ -1,5 +1,5 @@
 Name:           ail
-Version:        0.2.73
+Version:        0.2.80
 Release:        1
 License:        Apache-2.0
 Summary:        Application Information Library
@@ -31,6 +31,13 @@ cp %{SOURCE1001} .
 
 %build
 CFLAGS+=" -fpic"
+
+%if 0%{?tizen_build_binary_release_type_eng}
+export CFLAGS="$CFLAGS -DTIZEN_ENGINEER_MODE"
+export CXXFLAGS="$CXXFLAGS ?DTIZEN_ENGINEER_MODE"
+export FFLAGS="$FFLAGS -DTIZEN_ENGINEER_MODE"
+%endif
+
 %cmake .  -DBUILD_PKGTYPE=rpm \
 		  -DSMACK=Off
 
@@ -66,6 +73,10 @@ update_DAC_for_db_file()
         fi
 }
 ail_initdb
+mkdir -p /usr/share/applications
+mkdir -p /opt/share/applications
+mkdir -p /opt/dbspace/
+
 update_DAC_for_db_file /opt/dbspace/.app_info.db
 update_DAC_for_db_file /opt/dbspace/.app_info.db-journal
 
@@ -84,7 +95,12 @@ fi
 %{_datadir}/install-info/*
 %{_libdir}/libail.so.0
 %{_libdir}/libail.so.0.1.0
-
+/usr/bin/ail_initdb
+/usr/bin/ail_fota
+/usr/bin/ail_desktop
+/usr/bin/ail_filter
+/usr/bin/ail_package
+/usr/share/install-info/*
 
 %files devel
 %manifest %{name}.manifest

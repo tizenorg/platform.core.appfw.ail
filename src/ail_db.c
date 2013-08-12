@@ -72,14 +72,15 @@ ail_error_e db_open(db_open_mode mode)
 
 	if(mode & DB_OPEN_RO) {
 		if (!db_info.dbro) {
-			ret = db_util_open_with_options(APP_INFO_DB, &db_info.dbro, SQLITE_OPEN_READONLY, NULL);
+			//ret = db_util_open_with_options(APP_INFO_DB, &db_info.dbro, SQLITE_OPEN_READONLY, NULL);
+			ret = db_util_open(APP_INFO_DB, &db_info.dbro, 0);
 			retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 		}
 	}
 
 	if(mode & DB_OPEN_RW) {
 		if (!db_info.dbrw) {
-			ret = db_util_open(APP_INFO_DB, &db_info.dbrw, DB_UTIL_REGISTER_HOOK_METHOD);
+			ret = db_util_open(APP_INFO_DB, &db_info.dbrw, 0);
 			retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 		}
 	}

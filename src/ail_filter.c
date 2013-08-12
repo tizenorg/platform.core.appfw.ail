@@ -234,7 +234,7 @@ char *_get_where_clause(ail_filter_h filter)
 		}
 	}
 
-	_D("where = %s", w);
+//	_D("where = %s", w);
 
 	return strdup(w);
 }
@@ -245,16 +245,17 @@ EXPORT_API ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *cnt)
 	char *w;
 	char *tmp_q;
 	char *l;
-	int r;
-	int n;
+	ail_cb_ret_e r;
 	sqlite3_stmt *stmt;
+	ail_appinfo_h ai;
+	int filter_count = 0;
 
 	retv_if(!cnt, AIL_ERROR_INVALID_PARAMETER);
 
 	if (db_open(DB_OPEN_RO) != AIL_ERROR_OK)
 		return AIL_ERROR_DB_FAILED;
 
-	snprintf(q, sizeof(q), "SELECT COUNT (*) FROM %s", SQL_TBL_APP_INFO_WITH_LOCALNAME);
+	snprintf(q, sizeof(q), "SELECT %s FROM %s", SQL_FLD_APP_INFO_WITH_LOCALNAME, SQL_TBL_APP_INFO_WITH_LOCALNAME);
 
 	tmp_q = strdup(q);
 	retv_if (NULL == tmp_q, AIL_ERROR_OUT_OF_MEMORY);
@@ -268,32 +269,39 @@ EXPORT_API ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *cnt)
 	free(l);
 	free(tmp_q);
 
-	if (filter && filter->list) { 
+	if (filter && filter->list) {
 		w = _get_where_clause(filter);
 		retv_if (NULL == w, AIL_ERROR_FAIL);
 		strncat(q, w, sizeof(q)-strlen(q)-1);
 		q[sizeof(q)-1] = '\0';
 		free(w);
 	}
-
-	_D("Query = %s",q);
+	else
+		_D("No filter exists. All records are retreived");
 
 	if (db_prepare(q, &stmt) != AIL_ERROR_OK) {
+		_E("db_prepare fail for query = %s",q);
 		return AIL_ERROR_DB_FAILED;
 	}
 
-	r = db_step(stmt);
-	if (r == AIL_ERROR_OK) {
-		db_column_int(stmt, 0, &n);
-		*cnt = n;
+	ai = appinfo_create();
+
+	appinfo_set_stmt(ai, stmt);
+	while (db_step(stmt) == AIL_ERROR_OK) {
+
+		if(_appinfo_check_installed_storage(ai) != AIL_ERROR_OK)
+			continue;
+
+		filter_count++;
 	}
 
 	db_finalize(stmt);
 
-	return r;
+	appinfo_destroy(ai);
+	*cnt = filter_count;
+
+	return AIL_ERROR_OK;
 }
-
-
 
 EXPORT_API ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_list_appinfo_cb cb, void *user_data)
 {
@@ -336,9 +344,10 @@ EXPORT_API ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_
 	else
 		_D("No filter exists. All records are retreived");
 
-	_D("Query = %s",q);
+//	_D("Query = %s",q);
 
 	if (db_prepare(q, &stmt) != AIL_ERROR_OK) {
+		_E("db_prepare fail for query = %s",q);
 		return AIL_ERROR_DB_FAILED;
 	}
 
@@ -346,6 +355,9 @@ EXPORT_API ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_
 
 	appinfo_set_stmt(ai, stmt);
 	while (db_step(stmt) == AIL_ERROR_OK) {
+
+		if(_appinfo_check_installed_storage(ai) != AIL_ERROR_OK)
+			continue;
 
 		r = cb(ai, user_data);
 		if (AIL_CB_RET_CANCEL == r)

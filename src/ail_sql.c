@@ -50,6 +50,7 @@ static const char *filter[] = {
 	"app_info.X_SLP_PKGID='%s'",
 	"app_info.X_SLP_DOMAIN='%s'",
 	"app_info.X_SLP_SUBMODEMAINID='%s'",
+	"app_info.X_SLP_INSTALLEDSTORAGE='%s'",
 	"app_info.X_SLP_BASELAYOUTWIDTH=%d",
 	"app_info.X_SLP_INSTALLEDTIME=%d",
 	"app_info.NODISPLAY=%d",

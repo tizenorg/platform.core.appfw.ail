@@ -50,6 +50,7 @@
 			"app_info.X_SLP_PKGID," \
 			"app_info.X_SLP_DOMAIN," \
 			"app_info.X_SLP_SUBMODEMAINID," \
+			"app_info.X_SLP_INSTALLEDSTORAGE," \
 			"app_info.X_SLP_BASELAYOUTWIDTH," \
 			"app_info.X_SLP_INSTALLEDTIME," \
 			"app_info.NODISPLAY," \

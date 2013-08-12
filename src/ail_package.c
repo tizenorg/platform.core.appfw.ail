@@ -37,6 +37,8 @@
 #define LANGUAGE_LENGTH 2
 #define DEFAULT_LOCALE		"No Locale"
 #define MAX_QUERY_LEN	4096
+#define PKG_SD_PATH "/opt/storage/sdcard/app2sd/"
+#define QUERY_GET_LOCALNAME "select name from localname where package='%s' and locale='%s'"
 
 struct ail_appinfo {
 	char **values;
@@ -166,30 +168,7 @@ static char* __get_app_locale_by_fallback(const char *appid, const char *sysloca
 	return	strdup(DEFAULT_LOCALE);
 }
 
-void appinfo_set_stmt(ail_appinfo_h ai, sqlite3_stmt *stmt)
-{
-	ai->stmt = stmt;
-}
-
-ail_appinfo_h appinfo_create(void)
-{
-	ail_appinfo_h ai;
-	ai = calloc(1, sizeof(struct ail_appinfo));
-	retv_if (NULL == ai, NULL);
-	ai->stmt = NULL;
-
-	return ai;
-}
-
-void appinfo_destroy(ail_appinfo_h ai)
-{
-	if (ai) 
-		free(ai);
-}
-
-
-
-static ail_error_e _retrieve_all_column(ail_appinfo_h ai)
+static ail_error_e __retrieve_all_column(ail_appinfo_h ai)
 {
 	int i, j;
 	ail_error_e err;
@@ -229,6 +208,67 @@ static ail_error_e _retrieve_all_column(ail_appinfo_h ai)
 		return AIL_ERROR_OK;
 }
 
+int _appinfo_check_installed_storage(ail_appinfo_h ai)
+{
+	int index = 0;
+	ail_prop_str_e prop = -1;
+	char *pkgid = NULL;
+	char *installed_storage = NULL;
+	char buf[AIL_SQL_QUERY_MAX_LEN] = {'\0'};
+
+	retv_if(!ai, AIL_ERROR_OK);
+
+	if (ai->stmt) {
+		prop = _ail_convert_to_prop_str(AIL_PROP_X_SLP_INSTALLEDSTORAGE_STR);
+		index = sql_get_app_info_idx(prop);
+		if (db_column_str(ai->stmt, index, &installed_storage) < 0){
+			return AIL_ERROR_OK;
+		}
+
+		prop = _ail_convert_to_prop_str(AIL_PROP_X_SLP_PKGID_STR);
+		index = sql_get_app_info_idx(prop);
+		if (db_column_str(ai->stmt, index, &pkgid) < 0){
+			return AIL_ERROR_OK;
+		}
+	} else {
+		prop = _ail_convert_to_prop_str(AIL_PROP_X_SLP_INSTALLEDSTORAGE_STR);
+		installed_storage = ai->values[prop];
+
+		prop = _ail_convert_to_prop_str(AIL_PROP_X_SLP_PKGID_STR);
+		pkgid = ai->values[prop];
+	}
+
+	if (strcmp(installed_storage, "installed_external") == 0) {
+		snprintf(buf, AIL_SQL_QUERY_MAX_LEN - 1, "%s%s", PKG_SD_PATH, pkgid);
+		if (access(buf, R_OK) != 0) {
+			_E("can not access [%s]", buf);
+			return AIL_ERROR_OK;//tmep, it will be fixed to ::  return AIL_ERROR_FAIL;
+		}
+	}
+
+	return AIL_ERROR_OK;
+}
+
+void appinfo_set_stmt(ail_appinfo_h ai, sqlite3_stmt *stmt)
+{
+	ai->stmt = stmt;
+}
+
+ail_appinfo_h appinfo_create(void)
+{
+	ail_appinfo_h ai;
+	ai = calloc(1, sizeof(struct ail_appinfo));
+	retv_if (NULL == ai, NULL);
+	ai->stmt = NULL;
+
+	return ai;
+}
+
+void appinfo_destroy(ail_appinfo_h ai)
+{
+	if (ai)
+		free(ai);
+}
 
 EXPORT_API ail_error_e ail_package_destroy_appinfo(ail_appinfo_h ai)
 {
@@ -260,7 +300,6 @@ EXPORT_API ail_error_e ail_package_get_appinfo(const char *package, ail_appinfo_
 {
 	return ail_get_appinfo(package, ai);
 }
-
 
 EXPORT_API ail_error_e ail_get_appinfo(const char *appid, ail_appinfo_h *ai)
 {
@@ -294,7 +333,13 @@ EXPORT_API ail_error_e ail_get_appinfo(const char *appid, ail_appinfo_h *ai)
 
 		(*ai)->stmt = stmt;
 
-		ret = _retrieve_all_column(*ai);
+		ret = _appinfo_check_installed_storage(*ai);
+		if (ret < 0) {
+			db_finalize((*ai)->stmt);
+			break;
+		}
+
+		ret = __retrieve_all_column(*ai);
 		if (ret < 0) {
 			db_finalize((*ai)->stmt);
 			break;
@@ -365,8 +410,6 @@ EXPORT_API ail_error_e ail_appinfo_get_int(const ail_appinfo_h ai, const char *p
 	return AIL_ERROR_OK;
 }
 
-#define QUERY_GET_LOCALNAME "select name from localname where package='%s' and locale='%s'"
-
 char *appinfo_get_localname(const char *package, char *locale)
 {
 	db_open(DB_OPEN_RO);
@@ -377,7 +420,7 @@ char *appinfo_get_localname(const char *package, char *locale)
 	
 	snprintf(query, sizeof(query), QUERY_GET_LOCALNAME, package, locale);
 
-	_D("Query = %s",query);
+//	_D("Query = %s",query);
 	retv_if (db_prepare(query, &stmt) < 0, NULL);
 
 	do {

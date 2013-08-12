@@ -112,6 +112,7 @@ typedef struct {
 	char*		x_slp_pkgid;
 	char*		x_slp_domain;
 	char*		x_slp_submodemainid;
+	char*		x_slp_installedstorage;
 	int		x_slp_baselayoutwidth;
 	int		x_slp_installedtime;
 	int		nodisplay;
@@ -253,6 +254,8 @@ _get_icon_with_path(char* icon)
 		package = _get_package_from_icon(icon);
 		retv_if(!package, NULL);
 
+/* "db/setting/theme" is not exist */
+#if 0
 		theme = vconf_get_str("db/setting/theme");
 		if (!theme) {
 			theme = strdup("default");
@@ -261,6 +264,9 @@ _get_icon_with_path(char* icon)
 				return NULL;
 			}
 		}
+#else
+		theme = strdup("default");
+#endif
 
 		len = (0x01 << 7) + strlen(icon) + strlen(package) + strlen(theme);
 		icon_with_path = malloc(len);
@@ -507,6 +513,18 @@ static ail_error_e _read_x_slp_submodemainid(void *data, char *tag, char *value)
 	return AIL_ERROR_OK;
 }
 
+static ail_error_e _read_x_slp_installedstorage(void *data, char *tag, char *value)
+{
+	desktop_info_s *info = data;
+
+	retv_if(!data, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
+
+	SAFE_FREE_AND_STRDUP(value, info->x_slp_installedstorage);
+	retv_if(!info->x_slp_installedstorage, AIL_ERROR_OUT_OF_MEMORY);
+
+	return AIL_ERROR_OK;
+}
 
 static ail_error_e _read_x_slp_uri(void *data, char *tag, char *value)
 {
@@ -694,6 +712,10 @@ static struct entry_parser entry_parsers[] = {
 	{
 		.field = "x-tizen-submodemainid",
 		.value_cb = _read_x_slp_submodemainid,
+	},
+	{
+		.field = "x-tizen-installedstorage",
+		.value_cb = _read_x_slp_installedstorage,
 	},
 	{
 		.field = "x-tizen-uri",
@@ -907,6 +929,7 @@ static inline int _strlen_desktop_info(desktop_info_s* info)
 	if (info->x_slp_appid) len += strlen(info->x_slp_appid);
 	if (info->desktop) len += strlen(info->desktop);
 	if (info->x_slp_submodemainid) len += strlen(info->x_slp_submodemainid);
+	if (info->x_slp_installedstorage) len += strlen(info->x_slp_installedstorage);
 
 	return len;
 }
@@ -1076,6 +1099,7 @@ static ail_error_e _retrieve_all_column_to_desktop_info(desktop_info_s* info, sq
 	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_PKGID_STR], info->x_slp_pkgid);
 	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_DOMAIN_STR], info->x_slp_domain);
 	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_SUBMODEMAINID_STR], info->x_slp_submodemainid);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_INSTALLEDSTORAGE_STR], info->x_slp_installedstorage);
 
 	info->x_slp_installedtime = atoi(values[E_AIL_PROP_X_SLP_INSTALLEDTIME_INT]);
 
@@ -1192,7 +1216,12 @@ static ail_error_e _modify_desktop_info_str(desktop_info_s* info,
 			SAFE_FREE_AND_STRDUP(value, info->x_slp_svc);
 			retv_if (!info->x_slp_svc, AIL_ERROR_OUT_OF_MEMORY);
 			break;
+		case E_AIL_PROP_X_SLP_INSTALLEDSTORAGE_STR:
+			SAFE_FREE_AND_STRDUP(value, info->x_slp_installedstorage);
+			retv_if (!info->x_slp_installedstorage, AIL_ERROR_OUT_OF_MEMORY);
+			break;
 		default:
+			_E("prop[%d] is not defined\n", prop);
 			return AIL_ERROR_FAIL;
 	}
 
@@ -1227,6 +1256,7 @@ static ail_error_e _create_table(void)
 		"x_slp_pkgid TEXT, "
 		"x_slp_domain TEXT, "
 		"x_slp_submodemainid TEXT, "
+		"x_slp_installedstorage TEXT, "
 		"x_slp_baselayoutwidth INTEGER DEFAULT 0, "
 		"x_slp_installedtime INTEGER DEFAULT 0, "
 		"nodisplay INTEGER DEFAULT 0, "
@@ -1300,6 +1330,7 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 		"x_slp_pkgid, "
 		"x_slp_domain, "
 		"x_slp_submodemainid, "
+		"x_slp_installedstorage, "
 		"x_slp_baselayoutwidth, "
 		"x_slp_installedtime, "
 		"nodisplay, "
@@ -1314,7 +1345,7 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 		"('%q', '%q', '%q', '%q', '%q', "
 		"'%q', '%q', '%q', '%q', '%q', "
 		"'%q', '%q', '%q', '%q', '%q', "
-		"'%q', '%q', '%q', '%q',"
+		"'%q', '%q', '%q', '%q', '%q', "
 		"%d, %d, %d, %d, %d, %d, %d,"
 		"%d, %d, "
 		"'%q');",
@@ -1337,6 +1368,7 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 		info->x_slp_pkgid,
 		info->x_slp_domain,
 		info->x_slp_submodemainid,
+		info->x_slp_installedstorage,
 		info->x_slp_baselayoutwidth,
 		info->x_slp_installedtime,
 		info->nodisplay,
@@ -1363,7 +1395,7 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 	if (info->localname)
 		_insert_local_info(info);
 
-	_D("Add (%s).", info->package);
+	_D("Add (%s).", query);
 
 	return AIL_ERROR_OK;
 }
@@ -1404,6 +1436,7 @@ static ail_error_e _update_desktop_info(desktop_info_s *info)
 		"x_slp_pkgid='%q', "
 		"x_slp_domain='%q', "
 		"x_slp_submodemainid='%q', "
+		"x_slp_installedstorage='%q', "
 		"x_slp_baselayoutwidth=%d, "
 		"x_slp_installedtime=%d, "
 		"nodisplay=%d, "
@@ -1433,6 +1466,7 @@ static ail_error_e _update_desktop_info(desktop_info_s *info)
 		info->x_slp_pkgid,
 		info->x_slp_domain,
 		info->x_slp_submodemainid,
+		info->x_slp_installedstorage,
 		info->x_slp_baselayoutwidth,
 		info->x_slp_installedtime,
 		info->nodisplay,
@@ -1610,6 +1644,7 @@ static void _fini_desktop_info(desktop_info_s *info)
 	SAFE_FREE(info->x_slp_pkgid);
 	SAFE_FREE(info->x_slp_domain);
 	SAFE_FREE(info->x_slp_submodemainid);
+	SAFE_FREE(info->x_slp_installedstorage);
 	SAFE_FREE(info->desktop);
 	if (info->localname) {
 		g_slist_free_full(info->localname, _name_item_free_func);

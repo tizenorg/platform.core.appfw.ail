@@ -55,5 +55,4 @@ INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/ail.h DESTINATION include)
 INSTALL(FILES ${CMAKE_SOURCE_DIR}/desktop.conf DESTINATION share/install-info)
 
 # AIL init database
-ADD_SUBDIRECTORY(initdb)
-
+ADD_SUBDIRECTORY(tool)
