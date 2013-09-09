@@ -72,7 +72,7 @@ extern "C" {
 #define	AIL_PROP_X_SLP_APPID_STR		"AIL_PROP_X_SLP_APPID_STR"
 #define	AIL_PROP_X_SLP_PKGID_STR		"AIL_PROP_X_SLP_PKGID_STR"
 #define	AIL_PROP_X_SLP_DOMAIN_STR		"AIL_PROP_X_SLP_DOMAIN_STR"
-
+#define	AIL_PROP_X_SLP_SUBMODEMAINID_STR		"AIL_PROP_X_SLP_SUBMODEMAINID_STR"
 
 /**
  * @brief integer type properties
@@ -89,7 +89,7 @@ extern "C" {
 #define	AIL_PROP_X_SLP_REMOVABLE_BOOL		"AIL_PROP_X_SLP_REMOVABLE_BOOL"
 #define	AIL_PROP_X_SLP_ISHORIZONTALSCALE_BOOL	"AIL_PROP_X_SLP_ISHORIZONTALSCALE_BOOL"
 #define	AIL_PROP_X_SLP_ENABLED_BOOL		"AIL_PROP_X_SLP_ENABLED_BOOL"
-
+#define	AIL_PROP_X_SLP_SUBMODE_BOOL		"AIL_PROP_X_SLP_SUBMODE_BOOL"
 
 /**
  * @brief A handle for filters
@@ -1191,6 +1191,53 @@ static ail_error_e _clean_desktop(const char *pkgid)
  * @endcode
  */
 ail_error_e ail_desktop_clean(const char *pkgid);
+
+
+/**
+ * @fn ail_error_e ail_desktop_fota(const char *appid)
+ *
+ * @brief add a app information into Application Information Database.
+	A desktop file for this app has to be installed in the desktop directory before using this API.
+	If there is no database for Application Information Database, this API will create the DB.
+	If there is a DB, this function adds information for the app into the DB.
+	And a notification is not published to the applications who want to know about changing DB.
+ *
+ * @par Sync (or) Async : Synchronous API.
+ *
+ * @param[in] appid
+ *
+ * @return 0 if success, negative value(<0) if fail\n
+ * @retval	AIL_ERROR_OK					success
+ * @retval	AIL_ERROR_FAIL					internal error
+ * @retval 	AIL_ERROR_INVALID_PARAMETER		invalid parameter
+ *
+ * @pre a desktop file for the app has to be installed in the desktop directory before using this API.
+ * @post app information is added into the Application Information Database.
+ *
+ * @see  ail_desktop_update(), ail_desktop_remove()
+ *
+ * @par Prospective Clients:
+ * External Apps.
+ *
+ * @code
+static ail_error_e _add_desktop_fota(const char *appid)
+{
+	ail_error_e ret;
+
+	if (!appid) {
+		return AIL_ERROR_FAIL;
+	}
+
+	ret = ail_desktop_fota(appid);
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+
+	return AIL_ERROR_OK;
+}
+ * @endcode
+ */
+ail_error_e ail_desktop_fota(const char *appid);
 
 /**
  * @fn ail_error_e ail_desktop_appinfo_modify_str(const char *appid, const char *property, const char *value, bool broadcast)

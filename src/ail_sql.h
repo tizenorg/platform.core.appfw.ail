@@ -49,6 +49,7 @@
 			"app_info.X_SLP_APPID," \
 			"app_info.X_SLP_PKGID," \
 			"app_info.X_SLP_DOMAIN," \
+			"app_info.X_SLP_SUBMODEMAINID," \
 			"app_info.X_SLP_BASELAYOUTWIDTH," \
 			"app_info.X_SLP_INSTALLEDTIME," \
 			"app_info.NODISPLAY," \
@@ -56,7 +57,8 @@
 			"app_info.X_SLP_MULTIPLE," \
 			"app_info.X_SLP_REMOVABLE," \
 			"app_info.X_SLP_ISHORIZONTALSCALE," \
-			"app_info.X_SLP_ENABLED" \
+			"app_info.X_SLP_ENABLED," \
+			"app_info.X_SLP_SUBMODE" \
 
 
 #define SQL_FLD_APP_INFO_WITH_LOCALNAME SQL_FLD_APP_INFO",""localname.name"

@@ -33,6 +33,8 @@
 	if (expr) { \
 		_E("db_info.dbro: %s", sqlite3_errmsg(db_info.dbro)); \
 		_E("db_info.dbrw: %s", sqlite3_errmsg(db_info.dbrw)); \
+		_E("db_info.dbro errcode: %d", sqlite3_extended_errcode(db_info.dbro)); \
+		_E("db_info.dbrw errcode: %d", sqlite3_extended_errcode(db_info.dbrw)); \
 		return (val); \
 	} \
 } while (0)
@@ -81,6 +83,7 @@ ail_error_e db_prepare(const char *query, sqlite3_stmt **stmt)
 	ret = sqlite3_prepare_v2(db_info.dbro, query, strlen(query), stmt, NULL);
 	if (ret != SQLITE_OK) {
 		_E("%s\n", sqlite3_errmsg(db_info.dbro));
+		_E("%d\n", sqlite3_extended_errcode(db_info.dbro));
 		return AIL_ERROR_DB_FAILED;
 	} else 
 		return AIL_ERROR_OK;

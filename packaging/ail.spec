@@ -1,7 +1,7 @@
 #sbs-git:slp/pkgs/a/ail ail 0.2.22 29ac1f2c98453cad647cca6a92abc7da3dbb047b
 Name:       ail
 Summary:    Application Information Library
-Version:    0.2.75
+Version:    0.2.79
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -32,6 +32,13 @@ Application Information Library (devel)
 
 %build
 CFLAGS+=" -fpic"
+
+%if 0%{?tizen_build_binary_release_type_eng}
+export CFLAGS="$CFLAGS -DTIZEN_ENGINEER_MODE"
+export CXXFLAGS="$CXXFLAGS ?DTIZEN_ENGINEER_MODE"
+export FFLAGS="$FFLAGS -DTIZEN_ENGINEER_MODE"
+%endif
+
 %cmake .  -DBUILD_PKGTYPE=rpm
 
 make %{?jobs:-j%jobs}
@@ -60,11 +67,12 @@ update_DAC_for_db_file()
                 echo "Failed to change the perms of $@"
         fi
 }
+mkdir -p /usr/share/applications
+mkdir -p /opt/share/applications
 mkdir -p /opt/dbspace/
-ail_initdb
+
 update_DAC_for_db_file /opt/dbspace/.app_info.db
 update_DAC_for_db_file /opt/dbspace/.app_info.db-journal
-chsmack -a 'ail::db' /opt/dbspace/.app_info.db*
 
 %postun
 
@@ -73,6 +81,10 @@ chsmack -a 'ail::db' /opt/dbspace/.app_info.db*
 %{_libdir}/libail.so.0
 %{_libdir}/libail.so.0.1.0
 /usr/bin/ail_initdb
+/usr/bin/ail_fota
+/usr/bin/ail_desktop
+/usr/bin/ail_filter
+/usr/bin/ail_package
 /usr/share/install-info/*
 
 %files devel
