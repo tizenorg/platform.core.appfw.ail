@@ -1,28 +1,32 @@
-Name:       ail
-Summary:    Application Information Library
-Version:    0.2.73
-Release:    1
-Group:      System/Libraries
-License:    Apache License, Version 2.0
-Source0:    %{name}-%{version}.tar.gz
-Source1001: 	ail.manifest
-Requires(post): /sbin/ldconfig
-Requires(postun): /sbin/ldconfig
+Name:           ail
+Version:        0.2.73
+Release:        1
+License:        Apache-2.0
+Summary:        Application Information Library
+Group:          Application Framework/Libraries
+Source0:        %{name}-%{version}.tar.gz
+Source1001:     ail.manifest
 BuildRequires:  cmake
 BuildRequires:  vconf-keys-devel
-BuildRequires:  pkgconfig(sqlite3)
-BuildRequires:  pkgconfig(dlog)
-BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(db-util)
+BuildRequires:  pkgconfig(dlog)
+BuildRequires:  pkgconfig(sqlite3)
+BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(xdgmime)
+Requires:       libail = %{version}-%{release}
 
 %description
 Application Information Library
 
+%package -n libail
+Summary:        Application Information Library
+
+%description -n libail
+Application Information Library
+
 %package devel
-Summary:    Application Information Library Development files
-Group:      Development/Libraries
-Requires:   %{name} = %{version}-%{release}
+Summary:        Application Information Library Development files
+Requires:       libail = %{version}-%{release}
 
 %description devel
 Application Information Library (devel)
@@ -35,7 +39,7 @@ cp %{SOURCE1001} .
 CFLAGS+=" -fpic"
 %cmake .  -DBUILD_PKGTYPE=rpm
 
-make %{?jobs:-j%jobs}
+make %{?_smp_mflags}
 
 %install
 %make_install
@@ -74,16 +78,26 @@ if [ $1 == 0 ]; then
 rm -f /opt/dbspace/.app_info.db*
 fi
 
+
+%postun -n libail -p /sbin/ldconfig
+
+%post -n libail -p /sbin/ldconfig
+
 %files
+%manifest %{name}.manifest
+%license LICENSE
+%dir /opt/share/applications
+%{_bindir}/ail_initdb
+%{_datadir}/install-info/*
+
+%files -n libail
+%license LICENSE
 %manifest %{name}.manifest
 %{_libdir}/libail.so.0
 %{_libdir}/libail.so.0.1.0
-/opt/share/applications
-/usr/bin/ail_initdb
-/usr/share/install-info/*
 
 %files devel
 %manifest %{name}.manifest
-/usr/include/ail.h
+%{_includedir}/ail.h
 %{_libdir}/libail.so
 %{_libdir}/pkgconfig/ail.pc
