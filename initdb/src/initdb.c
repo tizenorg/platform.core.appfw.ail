@@ -38,6 +38,8 @@
 #define OPT_DESKTOP_DIRECTORY "/opt/share/applications"
 #define USR_DESKTOP_DIRECTORY "/usr/share/applications"
 #define APP_INFO_DB_FILE "/opt/dbspace/.app_info.db"
+#define APP_INFO_DB_FILE_JOURNAL "/opt/dbspace/.app_info.db-journal"
+#define APP_INFO_DB_LABEL "ail::db"
 
 #ifdef _E
 #undef _E
@@ -90,7 +92,7 @@ char* _desktop_to_package(const char* desktop)
 
 	tmp = strrchr(package, '.');
 	if(tmp == NULL) {
-		_E("(tmp == NULL) return\n");
+		_E("[%s] is not a desktop file", package);
 		free(package);
 		return NULL;
 	}
@@ -114,6 +116,8 @@ int initdb_load_directory(const char *directory)
 	struct dirent entry, *result;
 	int len, ret;
 	char buf[BUFSZE];
+	int total_cnt = 0;
+	int ok_cnt = 0;
 
 	// desktop file
 	dir = opendir(directory);
@@ -124,7 +128,7 @@ int initdb_load_directory(const char *directory)
 	}
 
 	len = strlen(directory) + 1;
-	_D("Loading desktop files from %s\n", directory);
+	_D("Loading desktop files from %s", directory);
 
 	for (ret = readdir_r(dir, &entry, &result);
 			ret == 0 && result != NULL;
@@ -132,20 +136,22 @@ int initdb_load_directory(const char *directory)
 		char *package;
 
 		if (entry.d_name[0] == '.') continue;
-
+		total_cnt++;
 		package = _desktop_to_package(entry.d_name);
 		if (!package) {
-			_E("Failed to convert file to package[%s]\n", entry.d_name);
+			_E("Failed to convert file to package[%s]", entry.d_name);
 			continue;
 		}
 
 		if (ail_desktop_add(package) != AIL_ERROR_OK) {
-			_E("Failed to add a package[%s]\n", package);
+			_E("Failed to add a package[%s]", package);
+		} else {
+			ok_cnt++;
 		}
-
 		free(package);
 	}
 
+	_D("Application-Desktop process : Success [%d], fail[%d], total[%d] \n", ok_cnt, total_cnt-ok_cnt, total_cnt);
 	closedir(dir);
 
 	return AIL_ERROR_OK;
@@ -176,7 +182,7 @@ static int initdb_change_perm(const char *db_file)
 			return AIL_ERROR_FAIL;
 		}
 
-		ret = chmod(files[i], S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+		ret = chmod(files[i], S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 		if (ret == -1) {
 			strerror_r(errno, buf, sizeof(buf));
 			_E("FAIL : chmod %s 0664, because %s", db_file, buf);
@@ -242,8 +248,10 @@ int main(int argc, char *argv[])
 		return AIL_ERROR_FAIL;
 	}
 
-	const char *argv_bin[] = { "/bin/rm", APP_INFO_DB_FILE, NULL };
-	xsystem(argv_bin);
+	const char *argv_rm[] = { "/bin/rm", APP_INFO_DB_FILE, NULL };
+	xsystem(argv_rm);
+	const char *argv_rmjn[] = { "/bin/rm", APP_INFO_DB_FILE_JOURNAL, NULL };
+	xsystem(argv_rmjn);
 
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);
@@ -251,26 +259,27 @@ int main(int argc, char *argv[])
 	ret = initdb_count_app();
 	if (ret > 0) {
 		_D("Some Apps in the App Info DB.");
-		return AIL_ERROR_OK;
 	}
 
 	ret = initdb_load_directory(OPT_DESKTOP_DIRECTORY);
 	if (ret == AIL_ERROR_FAIL) {
 		_E("cannot load opt desktop directory.");
-		return AIL_ERROR_FAIL;
 	}
 
 	ret = initdb_load_directory(USR_DESKTOP_DIRECTORY);
 	if (ret == AIL_ERROR_FAIL) {
 		_E("cannot load usr desktop directory.");
-		return AIL_ERROR_FAIL;
 	}
 
 	ret = initdb_change_perm(APP_INFO_DB_FILE);
 	if (ret == AIL_ERROR_FAIL) {
 		_E("cannot chown.");
-		return AIL_ERROR_FAIL;
 	}
+
+	const char *argv_smack[] = { "/usr/bin/chsmack", "-a", APP_INFO_DB_LABEL, APP_INFO_DB_FILE, NULL };
+	xsystem(argv_smack);
+	const char *argv_smackjn[] = { "/usr/bin/chsmack", "-a", APP_INFO_DB_LABEL, APP_INFO_DB_FILE_JOURNAL, NULL };
+	xsystem(argv_smackjn);
 
 	return AIL_ERROR_OK;
 }

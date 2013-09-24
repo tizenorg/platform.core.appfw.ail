@@ -1,7 +1,6 @@
-#sbs-git:slp/pkgs/a/ail ail 0.2.22 29ac1f2c98453cad647cca6a92abc7da3dbb047b
 Name:       ail
 Summary:    Application Information Library
-Version:    0.2.68
+Version:    0.2.73
 Release:    1
 Group:      System/Libraries
 License:    Apache License, Version 2.0
@@ -45,9 +44,9 @@ mkdir -p %{buildroot}/opt/dbspace/
 mkdir -p %{buildroot}/opt/share/applications/
 
 %post
-vconftool set -t string db/ail/ail_info "0" -f
-vconftool set -t string db/menuscreen/desktop "0" -f
-vconftool set -t string db/menu_widget/language "en_US.utf8" -f
+vconftool set -t string db/ail/ail_info "0" -f -s system::vconf_inhouse
+vconftool set -t string db/menuscreen/desktop "0" -f -s system::vconf_inhouse
+vconftool set -t string db/menu_widget/language "en_US.utf8" -f -s system::vconf_inhouse
 
 CHDBGID="6010"
 
@@ -79,7 +78,6 @@ fi
 %manifest %{name}.manifest
 %{_libdir}/libail.so.0
 %{_libdir}/libail.so.0.1.0
-/opt/dbspace
 /opt/share/applications
 /usr/bin/ail_initdb
 /usr/share/install-info/*

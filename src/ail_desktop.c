@@ -1199,7 +1199,9 @@ static ail_error_e _create_table(void)
 		"desktop TEXT UNIQUE NOT NULL);",
 		"CREATE TABLE localname (package TEXT NOT NULL, "
 		"locale TEXT NOT NULL, "
-		"name TEXT NOT NULL, PRIMARY KEY (package, locale));",
+		"name TEXT NOT NULL, "
+		"x_slp_pkgid TEXT NOT NULL, PRIMARY KEY (package, locale));",
+
 		NULL
 	};
 
@@ -1222,9 +1224,9 @@ static inline void _insert_localname(gpointer data, gpointer user_data)
 	struct name_item *item = (struct name_item *)data;
 	desktop_info_s *info = (desktop_info_s *)user_data;
 
-	snprintf(query, sizeof(query), "insert into localname (package, locale, name) "
-			"values ('%s', '%s', '%s');", 
-			info->package, item->locale, item->name);
+	snprintf(query, sizeof(query), "insert into localname (package, locale, name, x_slp_pkgid) "
+			"values ('%s', '%s', '%s', '%s');",
+			info->package, item->locale, item->name, info->x_slp_pkgid);
 	if (db_exec(query) < 0)
 		_E("Failed to insert local name of package[%s]",info->package);
 }
@@ -1455,6 +1457,41 @@ static ail_error_e _remove_package(const char* package)
 	return AIL_ERROR_OK;
 }
 
+static ail_error_e _clean_pkgid_data(const char* pkgid)
+{
+	char *query;
+	int size;
+
+	retv_if(!pkgid, AIL_ERROR_INVALID_PARAMETER);
+
+	if (db_open(DB_OPEN_RW) < 0) {
+		return AIL_ERROR_DB_FAILED;
+	}
+
+	size = strlen(pkgid) + (0x01 << 10);
+	query = calloc(1, size);
+	retv_if(!query, AIL_ERROR_OUT_OF_MEMORY);
+
+	snprintf(query, size, "delete from app_info where x_slp_pkgid = '%s'", pkgid);
+
+	if (db_exec(query) < 0) {
+		free(query);
+		return AIL_ERROR_DB_FAILED;
+	}
+
+	snprintf(query, size, "delete from localname where x_slp_pkgid = '%s'", pkgid);
+	_D("query=%s",query);
+
+	if (db_exec(query) < 0) {
+		free(query);
+		return AIL_ERROR_DB_FAILED;
+	}
+
+	_D("Clean pkgid data (%s).", pkgid);
+	free(query);
+
+	return AIL_ERROR_OK;
+}
 
 
 static ail_error_e _send_db_done_noti(noti_type type, const char *package)
@@ -1627,6 +1664,24 @@ EXPORT_API ail_error_e ail_desktop_remove(const char *appid)
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
 	ret = _send_db_done_noti(NOTI_REMOVE, appid);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+
+	return AIL_ERROR_OK;
+}
+
+EXPORT_API ail_error_e ail_desktop_clean(const char *pkgid)
+{
+	ail_error_e ret;
+
+	retv_if(!pkgid, AIL_ERROR_INVALID_PARAMETER);
+	if (!__is_authorized()) {
+		_E("You are not an authorized user on removing!\n");
+		return -1;
+	}
+
+	_D("ail_desktop_clean=%s",pkgid);
+
+	ret = _clean_pkgid_data(pkgid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
 	return AIL_ERROR_OK;

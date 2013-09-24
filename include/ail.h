@@ -1150,6 +1150,47 @@ static ail_error_e _remove_desktop(const char *appid)
  */
 ail_error_e ail_desktop_remove(const char *appid);
 
+/**
+ * @fn ail_error_e ail_desktop_clean(const char *pkgid)
+ *
+ * @brief clean a pkg information in the Application Information Database.
+ *
+ * @par Sync (or) Async : Synchronous API.
+ *
+ * @param[in] pkgid
+ *
+ * @return 0 if success, negative value(<0) if fail\n
+ * @retval	AIL_ERROR_OK					success
+ * @retval	AIL_ERROR_FAIL					internal error
+ * @retval 	AIL_ERROR_INVALID_PARAMETER		invalid parameter
+ *
+ * @pre no pre-condition.
+ * @post app information is removed in the Application Information Database.
+ *
+ * @see  ail_desktop_add(), ail_desktop_update()
+ *
+ * @par Prospective Clients:
+ * External Apps.
+ *
+ * @code
+static ail_error_e _clean_desktop(const char *pkgid)
+{
+	ail_error_e ret;
+
+	if (!appid) {
+		return AIL_ERROR_FAIL;
+	}
+
+	ret = ail_desktop_clean(pkgid);
+	if (ret != AIL_ERROR_OK) {
+		return AIL_ERROR_FAIL;
+	}
+
+	return AIL_ERROR_OK;
+}
+ * @endcode
+ */
+ail_error_e ail_desktop_clean(const char *pkgid);
 
 /**
  * @fn ail_error_e ail_desktop_appinfo_modify_str(const char *appid, const char *property, const char *value, bool broadcast)
