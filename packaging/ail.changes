@@ -1,3 +1,6 @@
+* Tue Sep 24 2013 Anas Nashif <anas.nashif@intel.com> accepted/tizen/20130912.084428@86efd85
+- cleanup packaging, split library
+
 * Mon Jul 29 2013 Baptiste DURAND <baptiste.durand@eurogiciel.fr> accepted/tizen/20130723.173843@e61ca35
 - Fix initial value for Vconf widget languague Key
 
