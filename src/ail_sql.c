@@ -49,6 +49,7 @@ static const char *filter[] = {
 	"app_info.X_SLP_APPID='%s'",
 	"app_info.X_SLP_PKGID='%s'",
 	"app_info.X_SLP_DOMAIN='%s'",
+	"app_info.X_SLP_SUBMODEMAINID='%s'",
 	"app_info.X_SLP_BASELAYOUTWIDTH=%d",
 	"app_info.X_SLP_INSTALLEDTIME=%d",
 	"app_info.NODISPLAY=%d",
@@ -57,6 +58,7 @@ static const char *filter[] = {
 	"app_info.X_SLP_REMOVABLE=%d",
 	"app_info.X_SLP_ISHORIZONTALSCALE=%d",
 	"app_info.X_SLP_ENABLED=%d",
+	"app_info.X_SLP_SUBMODE=%d",
 	NULL,
 };
 

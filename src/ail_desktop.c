@@ -111,6 +111,7 @@ typedef struct {
 	char*		x_slp_appid;
 	char*		x_slp_pkgid;
 	char*		x_slp_domain;
+	char*		x_slp_submodemainid;
 	int		x_slp_baselayoutwidth;
 	int		x_slp_installedtime;
 	int		nodisplay;
@@ -119,6 +120,7 @@ typedef struct {
 	int		x_slp_removable;
 	int		x_slp_ishorizontalscale;
 	int		x_slp_enabled;
+	int		x_slp_submode;
 	char*		desktop;
 	GSList*		localname;
 } desktop_info_s;
@@ -492,6 +494,18 @@ static ail_error_e _read_x_slp_packageid(void *data, char *tag, char *value)
 	return AIL_ERROR_OK;
 }
 
+static ail_error_e _read_x_slp_submodemainid(void *data, char *tag, char *value)
+{
+	desktop_info_s *info = data;
+
+	retv_if(!data, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
+
+	SAFE_FREE_AND_STRDUP(value, info->x_slp_submodemainid);
+	retv_if(!info->x_slp_submodemainid, AIL_ERROR_OUT_OF_MEMORY);
+
+	return AIL_ERROR_OK;
+}
 
 
 static ail_error_e _read_x_slp_uri(void *data, char *tag, char *value)
@@ -564,6 +578,18 @@ static ail_error_e _read_x_slp_removable(void *data, char *tag, char *value)
 	return AIL_ERROR_OK;
 }
 
+
+static ail_error_e _read_x_slp_submode(void *data, char *tag, char *value)
+{
+	desktop_info_s *info = data;
+
+	retv_if(!data, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
+
+	info->x_slp_submode = !strcasecmp(value, "true");
+
+	return AIL_ERROR_OK;
+}
 
 static ail_error_e _read_x_slp_appid(void *data, char *tag, char *value)
 {
@@ -666,6 +692,10 @@ static struct entry_parser entry_parsers[] = {
 		.value_cb = _read_x_slp_packageid,
 	},
 	{
+		.field = "x-tizen-submodemainid",
+		.value_cb = _read_x_slp_submodemainid,
+	},
+	{
 		.field = "x-tizen-uri",
 		.value_cb = _read_x_slp_uri,
 	},
@@ -684,6 +714,10 @@ static struct entry_parser entry_parsers[] = {
 	{
 		.field = "x-tizen-enabled",
 		.value_cb = _read_x_slp_enabled,
+	},
+	{
+		.field = "x-tizen-submode",
+		.value_cb = _read_x_slp_submode,
 	},
 	{
 		.field = "x-tizen-multiple",
@@ -872,6 +906,7 @@ static inline int _strlen_desktop_info(desktop_info_s* info)
 	if (info->x_slp_exe_path) len += strlen(info->x_slp_exe_path);
 	if (info->x_slp_appid) len += strlen(info->x_slp_appid);
 	if (info->desktop) len += strlen(info->desktop);
+	if (info->x_slp_submodemainid) len += strlen(info->x_slp_submodemainid);
 
 	return len;
 }
@@ -903,6 +938,7 @@ static ail_error_e _init_desktop_info(desktop_info_s *info, const char *package)
 
 	info->x_slp_taskmanage = 1;
 	info->x_slp_removable = 1;
+	info->x_slp_submode = 0;
 
 	if(is_initdb)
 		info->x_slp_installedtime = 0;
@@ -1039,6 +1075,7 @@ static ail_error_e _retrieve_all_column_to_desktop_info(desktop_info_s* info, sq
 	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_APPID_STR], info->x_slp_appid);
 	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_PKGID_STR], info->x_slp_pkgid);
 	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_DOMAIN_STR], info->x_slp_domain);
+	SAFE_FREE_AND_STRDUP(values[E_AIL_PROP_X_SLP_SUBMODEMAINID_STR], info->x_slp_submodemainid);
 
 	info->x_slp_installedtime = atoi(values[E_AIL_PROP_X_SLP_INSTALLEDTIME_INT]);
 
@@ -1048,6 +1085,7 @@ static ail_error_e _retrieve_all_column_to_desktop_info(desktop_info_s* info, sq
 	info->x_slp_removable = atoi(values[E_AIL_PROP_X_SLP_REMOVABLE_BOOL]);
 	info->x_slp_ishorizontalscale = atoi(values[E_AIL_PROP_X_SLP_ISHORIZONTALSCALE_BOOL]);
 	info->x_slp_enabled = atoi(values[E_AIL_PROP_X_SLP_ENABLED_BOOL]);
+	info->x_slp_submode = atoi(values[E_AIL_PROP_X_SLP_SUBMODE_BOOL]);
 
 	err = AIL_ERROR_OK;
 
@@ -1188,6 +1226,7 @@ static ail_error_e _create_table(void)
 		"x_slp_appid TEXT, "
 		"x_slp_pkgid TEXT, "
 		"x_slp_domain TEXT, "
+		"x_slp_submodemainid TEXT, "
 		"x_slp_baselayoutwidth INTEGER DEFAULT 0, "
 		"x_slp_installedtime INTEGER DEFAULT 0, "
 		"nodisplay INTEGER DEFAULT 0, "
@@ -1196,6 +1235,7 @@ static ail_error_e _create_table(void)
 		"x_slp_removable INTEGER DEFAULT 1, "
 		"x_slp_ishorizontalscale INTEGER DEFAULT 0, "
 		"x_slp_enabled INTEGER DEFAULT 1, "
+		"x_slp_submode INTEGER DEFAULT 0, "
 		"desktop TEXT UNIQUE NOT NULL);",
 		"CREATE TABLE localname (package TEXT NOT NULL, "
 		"locale TEXT NOT NULL, "
@@ -1224,8 +1264,8 @@ static inline void _insert_localname(gpointer data, gpointer user_data)
 	struct name_item *item = (struct name_item *)data;
 	desktop_info_s *info = (desktop_info_s *)user_data;
 
-	snprintf(query, sizeof(query), "insert into localname (package, locale, name, x_slp_pkgid) "
-			"values ('%s', '%s', '%s', '%s');",
+	sqlite3_snprintf(sizeof(query), query, "insert into localname (package, locale, name, x_slp_pkgid) "
+			"values ('%q', '%q', '%q', '%q');",
 			info->package, item->locale, item->name, info->x_slp_pkgid);
 	if (db_exec(query) < 0)
 		_E("Failed to insert local name of package[%s]",info->package);
@@ -1259,6 +1299,7 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 		"x_slp_appid, "
 		"x_slp_pkgid, "
 		"x_slp_domain, "
+		"x_slp_submodemainid, "
 		"x_slp_baselayoutwidth, "
 		"x_slp_installedtime, "
 		"nodisplay, "
@@ -1267,13 +1308,14 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 		"x_slp_removable, "
 		"x_slp_ishorizontalscale, "
 		"x_slp_enabled, "
+		"x_slp_submode, "
 		"desktop) "
 		"values "
 		"('%q', '%q', '%q', '%q', '%q', "
 		"'%q', '%q', '%q', '%q', '%q', "
 		"'%q', '%q', '%q', '%q', '%q', "
-		"'%q', '%q', '%q', "
-		"%d, %d, %d, %d, %d, %d, "
+		"'%q', '%q', '%q', '%q',"
+		"%d, %d, %d, %d, %d, %d, %d,"
 		"%d, %d, "
 		"'%q');",
 		info->package,
@@ -1294,6 +1336,7 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 		info->x_slp_appid,
 		info->x_slp_pkgid,
 		info->x_slp_domain,
+		info->x_slp_submodemainid,
 		info->x_slp_baselayoutwidth,
 		info->x_slp_installedtime,
 		info->nodisplay,
@@ -1302,6 +1345,7 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info)
 		info->x_slp_removable,
 		info->x_slp_ishorizontalscale,
 		info->x_slp_enabled,
+		info->x_slp_submode,
 		info->desktop
 		);
 
@@ -1359,6 +1403,7 @@ static ail_error_e _update_desktop_info(desktop_info_s *info)
 		"x_slp_appid='%q', "
 		"x_slp_pkgid='%q', "
 		"x_slp_domain='%q', "
+		"x_slp_submodemainid='%q', "
 		"x_slp_baselayoutwidth=%d, "
 		"x_slp_installedtime=%d, "
 		"nodisplay=%d, "
@@ -1367,6 +1412,7 @@ static ail_error_e _update_desktop_info(desktop_info_s *info)
 		"x_slp_removable=%d, "
 		"x_slp_ishorizontalscale=%d, "
 		"x_slp_enabled=%d, "
+		"x_slp_submode=%d, "
 		"desktop='%q'"
 		"where package='%q'",
 		info->exec,
@@ -1386,6 +1432,7 @@ static ail_error_e _update_desktop_info(desktop_info_s *info)
 		info->x_slp_appid,
 		info->x_slp_pkgid,
 		info->x_slp_domain,
+		info->x_slp_submodemainid,
 		info->x_slp_baselayoutwidth,
 		info->x_slp_installedtime,
 		info->nodisplay,
@@ -1394,6 +1441,7 @@ static ail_error_e _update_desktop_info(desktop_info_s *info)
 		info->x_slp_removable,
 		info->x_slp_ishorizontalscale,
 		info->x_slp_enabled,
+		info->x_slp_submode,
 		info->desktop,
 		info->package);
 
@@ -1561,6 +1609,7 @@ static void _fini_desktop_info(desktop_info_s *info)
 	SAFE_FREE(info->x_slp_appid);
 	SAFE_FREE(info->x_slp_pkgid);
 	SAFE_FREE(info->x_slp_domain);
+	SAFE_FREE(info->x_slp_submodemainid);
 	SAFE_FREE(info->desktop);
 	if (info->localname) {
 		g_slist_free_full(info->localname, _name_item_free_func);
@@ -1687,6 +1736,40 @@ EXPORT_API ail_error_e ail_desktop_clean(const char *pkgid)
 	return AIL_ERROR_OK;
 }
 
+
+EXPORT_API ail_error_e ail_desktop_fota(const char *appid)
+{
+	desktop_info_s info = {0,};
+	ail_error_e ret;
+	int count;
+
+	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
+	if (!__is_authorized()) {
+		_E("You are not an authorized user on adding!\n");
+		return -1;
+	}
+
+	count = _count_all();
+	if (count <= 0) {
+		ret = _create_table();
+		if (ret != AIL_ERROR_OK) {
+			_D("Cannot create a table. Maybe there is already a table.");
+		}
+	}
+
+	ret = _init_desktop_info(&info, appid);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+
+	ret = _read_desktop_info(&info);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+
+	ret = _insert_desktop_info(&info);
+	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+
+	_fini_desktop_info(&info);
+
+	return AIL_ERROR_OK;
+}
 
 EXPORT_API ail_error_e ail_desktop_appinfo_modify_bool(const char *appid,
 							     const char *property,

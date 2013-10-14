@@ -33,6 +33,8 @@
 	if (expr) { \
 		_E("db_info.dbro: %s", sqlite3_errmsg(db_info.dbro)); \
 		_E("db_info.dbrw: %s", sqlite3_errmsg(db_info.dbrw)); \
+		_E("db_info.dbro errcode: %d", sqlite3_extended_errcode(db_info.dbro)); \
+		_E("db_info.dbrw errcode: %d", sqlite3_extended_errcode(db_info.dbrw)); \
 		return (val); \
 	} \
 } while (0)
