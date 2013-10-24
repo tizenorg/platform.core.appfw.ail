@@ -1,3 +1,8 @@
+* Thu Oct 24 2013 Rusty Lynch <rusty.lynch@intel.com> accepted/tizen/20130925.184155@791277d
+- Fix TIVI 2012 : Add Smack build option
+- Fix TIVI-2012 : Unsplit ail package
+- sync with tizen 2.2 to fix a build error
+
 * Tue Sep 24 2013 Anas Nashif <anas.nashif@intel.com> accepted/tizen/20130912.084428@86efd85
 - cleanup packaging, split library
 
