@@ -13,15 +13,9 @@ BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(xdgmime)
-Requires:       libail = %{version}-%{release}
+Provides:       libail = %{version}-%{release}
 
 %description
-Application Information Library
-
-%package -n libail
-Summary:        Application Information Library
-
-%description -n libail
 Application Information Library
 
 %package devel
@@ -48,6 +42,7 @@ mkdir -p %{buildroot}/opt/dbspace/
 mkdir -p %{buildroot}/opt/share/applications/
 
 %post
+/sbin/ldconfig
 vconftool set -t string db/ail/ail_info "0" -f -s system::vconf_inhouse
 vconftool set -t string db/menuscreen/desktop "0" -f -s system::vconf_inhouse
 vconftool set -t string db/menu_widget/language "en_US.utf8" -f -s system::vconf_inhouse
@@ -74,14 +69,11 @@ update_DAC_for_db_file /opt/dbspace/.app_info.db
 update_DAC_for_db_file /opt/dbspace/.app_info.db-journal
 
 %postun
+/sbin/ldconfig
 if [ $1 == 0 ]; then
 rm -f /opt/dbspace/.app_info.db*
 fi
 
-
-%postun -n libail -p /sbin/ldconfig
-
-%post -n libail -p /sbin/ldconfig
 
 %files
 %manifest %{name}.manifest
@@ -89,12 +81,9 @@ fi
 %dir /opt/share/applications
 %{_bindir}/ail_initdb
 %{_datadir}/install-info/*
-
-%files -n libail
-%license LICENSE
-%manifest %{name}.manifest
 %{_libdir}/libail.so.0
 %{_libdir}/libail.so.0.1.0
+
 
 %files devel
 %manifest %{name}.manifest
