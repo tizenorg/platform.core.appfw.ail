@@ -31,7 +31,8 @@ cp %{SOURCE1001} .
 
 %build
 CFLAGS+=" -fpic"
-%cmake .  -DBUILD_PKGTYPE=rpm
+%cmake .  -DBUILD_PKGTYPE=rpm \
+		  -DSMACK=Off
 
 make %{?_smp_mflags}
 

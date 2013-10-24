@@ -275,12 +275,12 @@ int main(int argc, char *argv[])
 	if (ret == AIL_ERROR_FAIL) {
 		_E("cannot chown.");
 	}
-
+#ifdef WRT_SMACK_ENABLED
 	const char *argv_smack[] = { "/usr/bin/chsmack", "-a", APP_INFO_DB_LABEL, APP_INFO_DB_FILE, NULL };
 	xsystem(argv_smack);
 	const char *argv_smackjn[] = { "/usr/bin/chsmack", "-a", APP_INFO_DB_LABEL, APP_INFO_DB_FILE_JOURNAL, NULL };
 	xsystem(argv_smackjn);
-
+#endif
 	return AIL_ERROR_OK;
 }
 
