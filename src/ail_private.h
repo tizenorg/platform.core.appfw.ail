@@ -27,6 +27,7 @@
 
 #include <stdbool.h>
 #include <sqlite3.h>
+#include <tzplatform_config.h>
 
 #ifndef EXPORT_API
 #define EXPORT_API __attribute__ ((visibility("default")))
@@ -91,7 +92,7 @@ enum {
 #define ELEMENT_BOOL(e) ((struct element_bool *)(e))
 
 #define AIL_SQL_QUERY_MAX_LEN	2048
-#define APP_INFO_DB "/opt/dbspace/.app_info.db"
+#define APP_INFO_DB tzplatform_mkpath(TZ_SYS_DB,".app_info.db")
 
 #define ELEMENT_TYPE(e, t) do { \
 	if(e->prop >= E_AIL_PROP_STR_MIN && e->prop <= E_AIL_PROP_STR_MAX) t= (int)VAL_TYPE_STR; \

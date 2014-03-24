@@ -35,10 +35,10 @@
 #define OWNER_ROOT 0
 #define GROUP_MENU 6010
 #define BUFSZE 1024
-#define OPT_DESKTOP_DIRECTORY "/opt/share/applications"
-#define USR_DESKTOP_DIRECTORY "/usr/share/applications"
-#define APP_INFO_DB_FILE "/opt/dbspace/.app_info.db"
-#define APP_INFO_DB_FILE_JOURNAL "/opt/dbspace/.app_info.db-journal"
+#define OPT_DESKTOP_DIRECTORY tzplatform_getenv(TZ_SYS_RW_DESKTOP_APP)
+#define USR_DESKTOP_DIRECTORY tzplatform_getenv(TZ_SYS_RO_DESKTOP_APP)
+#define APP_INFO_DB_FILE tzplatform_mkpath(TZ_SYS_DB,".app_info.db")
+#define APP_INFO_DB_FILE_JOURNAL tzplatform_mkpath(TZ_SYS_DB,".app_info.db-journal")
 #define APP_INFO_DB_LABEL "ail::db"
 
 #ifdef _E

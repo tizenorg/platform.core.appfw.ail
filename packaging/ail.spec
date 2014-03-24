@@ -13,6 +13,7 @@ BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(xdgmime)
+BuildRequires:  pkgconfig(libtzplatform-config)
 Provides:       libail = %{version}-%{release}
 
 %description
@@ -46,8 +47,8 @@ make %{?_smp_mflags}
 %install
 %make_install
 
-mkdir -p %{buildroot}/opt/dbspace/
-mkdir -p %{buildroot}/opt/share/applications/
+mkdir -p %{buildroot}%{TZ_SYS_DB}/
+mkdir -p %{buildroot}%{TZ_SYS_RW_DESKTOP_APP}/
 
 %post
 /sbin/ldconfig
@@ -73,34 +74,33 @@ update_DAC_for_db_file()
         fi
 }
 ail_initdb
-mkdir -p /usr/share/applications
-mkdir -p /opt/share/applications
-mkdir -p /opt/dbspace/
+mkdir -p %{TZ_SYS_RO_DESKTOP_APP}
+mkdir -p %{TZ_SYS_RW_DESKTOP_APP}
+mkdir -p %{TZ_SYS_DB}
 
-update_DAC_for_db_file /opt/dbspace/.app_info.db
-update_DAC_for_db_file /opt/dbspace/.app_info.db-journal
+update_DAC_for_db_file %{TZ_SYS_DB}/.app_info.db
+update_DAC_for_db_file %{TZ_SYS_DB}/.app_info.db-journal
 
 %postun
 /sbin/ldconfig
 if [ $1 == 0 ]; then
-rm -f /opt/dbspace/.app_info.db*
+rm -f %{TZ_SYS_DB}/.app_info.db*
 fi
 
 
 %files
 %manifest %{name}.manifest
 %license LICENSE
-%dir /opt/share/applications
+%dir %{TZ_SYS_RW_DESKTOP_APP}
 %{_bindir}/ail_initdb
+%{_bindir}/ail_initdb
+%{_bindir}/ail_fota
+%{_bindir}/ail_desktop
+%{_bindir}/ail_filter
+%{_bindir}/ail_package
 %{_datadir}/install-info/*
 %{_libdir}/libail.so.0
 %{_libdir}/libail.so.0.1.0
-/usr/bin/ail_initdb
-/usr/bin/ail_fota
-/usr/bin/ail_desktop
-/usr/bin/ail_filter
-/usr/bin/ail_package
-/usr/share/install-info/*
 
 %files devel
 %manifest %{name}.manifest
