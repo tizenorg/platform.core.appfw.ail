@@ -232,12 +232,12 @@ int main(int argc, char *argv[])
 		{ "taskmanage", 1, &(e.prop), E_AIL_PROP_X_SLP_TASKMANAGE_BOOL},
 		{ "multiple", 1, &(e.prop), E_AIL_PROP_X_SLP_MULTIPLE_BOOL},
 		{ "removable", 1, &(e.prop), E_AIL_PROP_X_SLP_REMOVABLE_BOOL},
-		{ "appid", 1, &(e.prop), AIL_PROP_X_SLP_APPID_STR},
-		{ "pkgid", 1, &(e.prop), AIL_PROP_X_SLP_PKGID_STR},
+		{ "appid", 1, &(e.prop), E_AIL_PROP_X_SLP_APPID_STR},
+		{ "pkgid", 1, &(e.prop), E_AIL_PROP_X_SLP_PKGID_STR},
 		{ "submode", 1, &(e.prop), E_AIL_PROP_X_SLP_SUBMODE_BOOL},
-		{ "submodemainid", 1, &(e.prop), AIL_PROP_X_SLP_SUBMODEMAINID_STR},
-		{ "installedstorage", 1, &(e.prop), AIL_PROP_X_SLP_INSTALLEDSTORAGE_STR},
-		{ "domain", 1, &(e.prop), AIL_PROP_X_SLP_DOMAIN_STR},
+		{ "submodemainid", 1, &(e.prop), E_AIL_PROP_X_SLP_SUBMODEMAINID_STR},
+		{ "installedstorage", 1, &(e.prop), E_AIL_PROP_X_SLP_INSTALLEDSTORAGE_STR},
+		{ "domain", 1, &(e.prop), E_AIL_PROP_X_SLP_DOMAIN_STR},
 		{ 0, 0, 0, 0 },
 	};
 
