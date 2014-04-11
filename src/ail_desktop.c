@@ -39,8 +39,6 @@
 #include "ail_sql.h"
 #include "ail.h"
 
-#define OPT_DESKTOP_DIRECTORY "/opt/share/applications"
-#define USR_DESKTOP_DIRECTORY "/usr/share/applications"
 #define BUFSZE 4096
 
 #define whitespace(c) (((c) == ' ') || ((c) == '\t'))
@@ -790,25 +788,30 @@ static int _count_all(void)
 	return count;
 }
 
-
-
 char *_pkgname_to_desktop(const char *package)
 {
 	char *desktop;
+  char *desktop_path;
 	int size;
 
 	retv_if(!package, NULL);
 
-	size = strlen(OPT_DESKTOP_DIRECTORY) + strlen(package) + 10;
+	if(getuid() > 0)
+  {
+    desktop_path = tzplatform_mkpath(TZ_USER_HOME, ".applications/desktop");
+  }
+  else
+  {
+    desktop_path = tzplatform_getenv(TZ_SYS_RW_DESKTOP_APP);
+  }
+
+	size = strlen(desktop_path) + strlen(package) + 10;
 	desktop = malloc(size);
 	retv_if(!desktop, NULL);
 
-	snprintf(desktop, size, OPT_DESKTOP_DIRECTORY"/%s.desktop", package);
+  snprintf(desktop, size, "%s/%s.desktop", desktop_path, package);
 
-	if (access(desktop, R_OK) == 0)
-		return desktop;
-
-	snprintf(desktop, size, USR_DESKTOP_DIRECTORY"/%s.desktop", package);
+  _D("uid: %d / desktop: [%s]\n",  getuid(), desktop);
 
 	return desktop;
 }
@@ -943,12 +946,12 @@ int __is_ail_initdb(void)
 		return 0;
 }
 
-
-
 /* Manipulating desktop_info functions */
 static ail_error_e _init_desktop_info(desktop_info_s *info, const char *package)
 {
 	static int is_initdb = -1;
+
+  _D("package - [%s].", package);
 
 	if(is_initdb == -1)
 		is_initdb = __is_ail_initdb();
@@ -984,6 +987,8 @@ static ail_error_e _init_desktop_info(desktop_info_s *info, const char *package)
 
 	info->desktop = _pkgname_to_desktop(package);
 	retv_if(!info->desktop, AIL_ERROR_FAIL);
+
+  _D("desktop - [%s].", info->desktop);
 
 	return AIL_ERROR_OK;
 }
@@ -1575,7 +1580,6 @@ static ail_error_e _clean_pkgid_data(const char* pkgid)
 	return AIL_ERROR_OK;
 }
 
-
 static ail_error_e _send_db_done_noti(noti_type type, const char *package)
 {
 	char *type_string, *noti_string;
@@ -1597,11 +1601,11 @@ static ail_error_e _send_db_done_noti(noti_type type, const char *package)
 			return AIL_ERROR_FAIL;
 	}
 
-	size = strlen(package) + 8;
-	noti_string = calloc(1, size);
+	size = snprintf(NULL, 0, "%s:%s:%u", type_string, package, getuid());
+	noti_string = (char*) calloc(size + 1, sizeof(char));
 	retv_if(!noti_string, AIL_ERROR_OUT_OF_MEMORY);
 
-	snprintf(noti_string, size, "%s:%s", type_string, package);
+	snprintf(noti_string, size + 1, "%s:%s:%u", type_string, package, getuid());
 	vconf_set_str(VCONFKEY_AIL_INFO_STATE, noti_string);
 	vconf_set_str(VCONFKEY_MENUSCREEN_DESKTOP, noti_string); // duplicate, will be removed
 	_D("Noti : %s", noti_string);
@@ -1672,10 +1676,6 @@ EXPORT_API ail_error_e ail_desktop_add(const char *appid)
 	int count;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
-	if (!__is_authorized()) {
-		_E("You are not an authorized user on adding!\n");
-		return -1;
-	}
 
 	count = _count_all();
 	if (count <= 0) {
@@ -1684,7 +1684,6 @@ EXPORT_API ail_error_e ail_desktop_add(const char *appid)
 			_D("Cannot create a table. Maybe there is already a table.");
 		}
 	}
-
 	ret = _init_desktop_info(&info, appid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
@@ -1710,10 +1709,6 @@ EXPORT_API ail_error_e ail_desktop_update(const char *appid)
 	ail_error_e ret;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
-	if (!__is_authorized()) {
-		_E("You are not an authorized user on updating!\n");
-		return -1;
-	}
 
 	ret = _init_desktop_info(&info, appid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
@@ -1739,10 +1734,6 @@ EXPORT_API ail_error_e ail_desktop_remove(const char *appid)
 	ail_error_e ret;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
-	if (!__is_authorized()) {
-		_E("You are not an authorized user on removing!\n");
-		return -1;
-	}
 
 	ret = _remove_package(appid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
@@ -1758,10 +1749,6 @@ EXPORT_API ail_error_e ail_desktop_clean(const char *pkgid)
 	ail_error_e ret;
 
 	retv_if(!pkgid, AIL_ERROR_INVALID_PARAMETER);
-	if (!__is_authorized()) {
-		_E("You are not an authorized user on removing!\n");
-		return -1;
-	}
 
 	_D("ail_desktop_clean=%s",pkgid);
 
@@ -1779,10 +1766,6 @@ EXPORT_API ail_error_e ail_desktop_fota(const char *appid)
 	int count;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
-	if (!__is_authorized()) {
-		_E("You are not an authorized user on adding!\n");
-		return -1;
-	}
 
 	count = _count_all();
 	if (count <= 0) {
