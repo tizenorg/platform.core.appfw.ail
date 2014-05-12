@@ -80,6 +80,7 @@ mkdir -p %{TZ_SYS_DB}
 
 update_DAC_for_db_file %{TZ_SYS_DB}/.app_info.db
 update_DAC_for_db_file %{TZ_SYS_DB}/.app_info.db-journal
+chsmack -a 'User' %{TZ_SYS_DB}/.app_info.db*
 
 %postun
 /sbin/ldconfig
