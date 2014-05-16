@@ -26,7 +26,9 @@
 #define __AIL_H__
 
 #include <stdbool.h>
-
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
 #define OWNER_ROOT 0
 #define GROUP_MENU 6010
 #define BUFSZE 1024
