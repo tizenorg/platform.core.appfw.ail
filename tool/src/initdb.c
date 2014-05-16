@@ -236,14 +236,14 @@ int main(int argc, char *argv[])
 
 	if (!__is_authorized()) {
 		fprintf(stderr, "You are not an authorized user!\n");
-		_D("You are not an authorized user!\n");
-		return AIL_ERROR_FAIL;
-	}
-
+		_D("You are not root user!\n");
+    }
+    else {
 	const char *argv_rm[] = { "/bin/rm", APP_INFO_DB_FILE, NULL };
 	xsystem(argv_rm);
 	const char *argv_rmjn[] = { "/bin/rm", APP_INFO_DB_FILE_JOURNAL, NULL };
 	xsystem(argv_rmjn);
+    }
 
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);
@@ -263,15 +263,17 @@ int main(int argc, char *argv[])
 		_E("cannot load usr desktop directory.");
 	}
 
-	ret = initdb_change_perm(APP_INFO_DB_FILE);
-	if (ret == AIL_ERROR_FAIL) {
-		_E("cannot chown.");
-	}
 
-	const char *argv_smack[] = { "/usr/bin/chsmack", "-a", APP_INFO_DB_LABEL, APP_INFO_DB_FILE, NULL };
-	xsystem(argv_smack);
-	const char *argv_smackjn[] = { "/usr/bin/chsmack", "-a", APP_INFO_DB_LABEL, APP_INFO_DB_FILE_JOURNAL, NULL };
-	xsystem(argv_smackjn);
+	if (__is_authorized()) {
+		ret = initdb_change_perm(APP_INFO_DB_FILE);
+		if (ret == AIL_ERROR_FAIL) {
+			_E("cannot chown.");
+		}
+		const char *argv_smack[] = { "/usr/bin/chsmack", "-a", APP_INFO_DB_LABEL, APP_INFO_DB_FILE, NULL };
+		xsystem(argv_smack);
+		const char *argv_smackjn[] = { "/usr/bin/chsmack", "-a", APP_INFO_DB_LABEL, APP_INFO_DB_FILE_JOURNAL, NULL };
+		xsystem(argv_smackjn);
+	}
 
 	return AIL_ERROR_OK;
 }

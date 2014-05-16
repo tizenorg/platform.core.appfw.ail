@@ -1672,10 +1672,6 @@ EXPORT_API ail_error_e ail_desktop_add(const char *appid)
 	int count;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
-	if (!__is_authorized()) {
-		_E("You are not an authorized user on adding!\n");
-		return -1;
-	}
 
 	count = _count_all();
 	if (count <= 0) {
@@ -1710,10 +1706,6 @@ EXPORT_API ail_error_e ail_desktop_update(const char *appid)
 	ail_error_e ret;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
-	if (!__is_authorized()) {
-		_E("You are not an authorized user on updating!\n");
-		return -1;
-	}
 
 	ret = _init_desktop_info(&info, appid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
@@ -1739,10 +1731,6 @@ EXPORT_API ail_error_e ail_desktop_remove(const char *appid)
 	ail_error_e ret;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
-	if (!__is_authorized()) {
-		_E("You are not an authorized user on removing!\n");
-		return -1;
-	}
 
 	ret = _remove_package(appid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
@@ -1758,10 +1746,6 @@ EXPORT_API ail_error_e ail_desktop_clean(const char *pkgid)
 	ail_error_e ret;
 
 	retv_if(!pkgid, AIL_ERROR_INVALID_PARAMETER);
-	if (!__is_authorized()) {
-		_E("You are not an authorized user on removing!\n");
-		return -1;
-	}
 
 	_D("ail_desktop_clean=%s",pkgid);
 
@@ -1779,10 +1763,6 @@ EXPORT_API ail_error_e ail_desktop_fota(const char *appid)
 	int count;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
-	if (!__is_authorized()) {
-		_E("You are not an authorized user on adding!\n");
-		return -1;
-	}
 
 	count = _count_all();
 	if (count <= 0) {
