@@ -30,14 +30,16 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <tzplatform_config.h>
+
 #define OWNER_ROOT 0
 #define GROUP_MENU 6010
+#define GLOBAL_USER 0 //tzplatform
 #define BUFSZE 1024
 #define OPT_DESKTOP_DIRECTORY tzplatform_getenv(TZ_SYS_RW_DESKTOP_APP)
 #define USR_DESKTOP_DIRECTORY tzplatform_getenv(TZ_SYS_RO_DESKTOP_APP)
 #define APP_INFO_DB_FILE tzplatform_mkpath(TZ_SYS_DB,".app_info.db")
 #define APP_INFO_DB_FILE_JOURNAL tzplatform_mkpath(TZ_SYS_DB,".app_info.db-journal")
-#define APP_INFO_DB_LABEL "ail::db"
+#define APP_INFO_DB_LABEL "_"
 
 #ifdef __cplusplus
 extern "C" {
@@ -442,7 +444,7 @@ typedef ail_cb_ret_e (*ail_list_appinfo_cb) (const ail_appinfo_h appinfo_h, void
 
 /**
  * @fn ail_error_e ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_list_appinfo_cb func, void *user_data)
- *
+ * @fn ail_error_e ail_error_e ail_filter_list_usr_appinfo_foreach(ail_filter_h filter, ail_list_appinfo_cb func, void *user_data, uid_t uid)
  * @brief Calls the callback function for each app filtered by given filter. If the filter is not given (i.e filter handle is NULL), it is invoked for all apps.
  *
  * @par Sync (or) Async : Synchronous API
@@ -450,6 +452,7 @@ typedef ail_cb_ret_e (*ail_list_appinfo_cb) (const ail_appinfo_h appinfo_h, void
  * @param[in] filter		a filter handle
  * @param[in] func			the function to call with each app's appinfo
  * @param[in] user_data		user_data to pass to the function
+ * @param[in] uid 	ID of the owner of the application
  *
  * @return  0 if success, negative value(<0) if fail\n
  * @retval AIL_ERROR_OK					success
@@ -513,18 +516,19 @@ int list_apps()
 ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter,
                                             ail_list_appinfo_cb appinfo_func,
                                             void *user_data);
-
-
-
+ail_error_e ail_filter_list_usr_appinfo_foreach(ail_filter_h filter,
+                                            ail_list_appinfo_cb appinfo_func,
+                                            void *user_data, uid_t uid);
 /**
- * @fn ail_error_e ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *count)
- *
+ * @fn ail_error_e ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *count, uid_t uid)
+ * @fn ail_error_e ail_error_e ail_filter_count_usr_appinfo(ail_filter_h filter, int *count)
  * @brief Gets the number of app which is filtered by the given filter. If the filter is not given (i.e filter handle is NULL), all app are counted.
  *
  * @par Sync (or) Async : Synchronous API
  *
  * @param[in] filter	a filter handle
  * @param[in] count		the number of appinfo which is filtered
+ * @param[in] uid 	ID of the owner of the application
  *
  * @return 0 if success, negative value(<0) if fail\n
  * @retval	AIL_ERROR_OK					success
@@ -578,12 +582,11 @@ int count_apps()
  * @endcode
  */
 ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *count);
-
-
+ail_error_e ail_filter_count_usr_appinfo(ail_filter_h filter, int *count, uid_t uid);
 
 /**
  * @fn ail_error_e ail_package_get_appinfo(const char *package, ail_appinfo_h *handle)
- *
+ * @fn ail_error_e ail_package_get_appinfo(const char *package, uid_t uid, ail_appinfo_h *handle)
  * @brief get an application information related to a package. 
  	This API just retrieves all the information of the package from Application Information Database.
 	All data related to the package are loaded in the memory after calling this function. 
@@ -592,6 +595,7 @@ ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *count);
  * @par Sync (or) Async : Synchronous API.
  *
  * @param[in] package package name what you want to know about.
+ * @param[in] uid 	ID of the owner of the application
  * @param[out] handle handle will be used with the functions of ail_appinfo_get_xxx. If no data, it will be NULL.
  *
  * @return 0 if success, negative value(<0) if fail\n
@@ -637,11 +641,10 @@ static ail_error_e _get_name(const char *package)
  * @endcode
  */
 ail_error_e ail_package_get_appinfo(const char *package, ail_appinfo_h *handle) __attribute__((deprecated));
-
-
+ail_error_e ail_package_get_usr_appinfo(const char *package, uid_t uid, ail_appinfo_h *handle) __attribute__((deprecated));
 /**
  * @fn ail_error_e ail_get_appinfo(const char *appid, ail_appinfo_h *handle)
- *
+ * @fn ail_error_e ail_get_usr_appinfo(const char *appid, uid_t uid, ail_appinfo_h *handle)
  * @brief get an application information related to a appid.
 	This API just retrieves all the information of the application from Application Information Database.
 	All data related to the appid are loaded in the memory after calling this function.
@@ -695,7 +698,7 @@ static ail_error_e _get_name(const char *appid)
  * @endcode
  */
 ail_error_e ail_get_appinfo(const char *appid, ail_appinfo_h *handle);
-
+ail_error_e ail_get_usr_appinfo(const char *appid, uid_t uid, ail_appinfo_h *handle);
 
 /**
  * @fn ail_error_e ail_appinfo_get_bool(const ail_appinfo_h handle, const char *property, bool *value)
@@ -809,11 +812,9 @@ static ail_error_e _get_x_slp_baselayoutwidth(const char *appid)
  */
 ail_error_e ail_appinfo_get_int(const ail_appinfo_h handle, const char *property, int *value);
 
-
-
 /**
- * @fn ail_error_e ail_appinfo_get_str(const ail_appinfo_h handle, const char *property, char **str)
- *
+ * @fn ail_error_e ail_appinfo_get_str(const ail_appinfo_h handle, const char *property, uid_t uid, char **str)
+ * @fn ail_error_e ail_appinfo_get_usr_str(const ail_appinfo_h handle, const char *property, char **str)
  * @brief get a string related to the property. 
  	Before using this API, the handle is defined by calling ail_get_appinfo.
 	This function needs a out-parameter for the value.
@@ -822,6 +823,7 @@ ail_error_e ail_appinfo_get_int(const ail_appinfo_h handle, const char *property
  *
  * @param[in] handle	the handle is defined by calling ail_get_appinfo.
  * @param[in] property	a property type of string.
+ * @param[in]	uid	the addressee user id of the instruction
  * @param[out] str		a out-parameter string that is mapped with the property. The icon property contains the absolute file path. If there is no data, the value of str is NULL.
  *
  * @return 0 if success, negative value(<0) if fail\n
@@ -865,7 +867,7 @@ static ail_error_e _get_nodisplay(const char *appid)
  * @endcode
  */
 ail_error_e ail_appinfo_get_str(const ail_appinfo_h handle, const char *property, char **str);
-
+ail_error_e ail_appinfo_get_usr_str(const ail_appinfo_h handle, const char *property, uid_t uid, char **str);
 
 
 /**
@@ -1027,8 +1029,8 @@ ail_error_e ail_close_appinfo_db(void);
 
 
 /**
- * @fn ail_error_e ail_desktop_add(const char *appid)
- *
+ * @fn ail_error_e ail_desktop_add(const char *appid, )
+ * @fn ail_error_e ail_usr_desktop_add(const char *appid, uid_t uid)
  * @brief add a app information into Application Information Database.
 	A desktop file for this app has to be installed in the desktop directory before using this API.
 	If there is no database for Application Information Database, this API will create the DB.
@@ -1038,6 +1040,7 @@ ail_error_e ail_close_appinfo_db(void);
  * @par Sync (or) Async : Synchronous API.
  *
  * @param[in] appid
+ * @param[in]	uid	the addressee user id of the instruction
  *
  * @return 0 if success, negative value(<0) if fail\n
  * @retval	AIL_ERROR_OK					success
@@ -1071,12 +1074,12 @@ static ail_error_e _add_desktop(const char *appid)
  * @endcode
  */
 ail_error_e ail_desktop_add(const char *appid);
-
+ail_error_e ail_usr_desktop_add(const char *appid, uid_t uid);
 
 
 /**
  * @fn ail_error_e ail_desktop_update(const char *appid)
- *
+ * @fn ail_error_e ail_usr_desktop_update(const char *appid,  uid_t uid)
  * @brief update a app information in the Application Information Database.
 	A desktop file for this app has to be installed in the desktop directory before using this API.
 	And a notification is published to the applications who want to know about changing DB. 
@@ -1084,6 +1087,7 @@ ail_error_e ail_desktop_add(const char *appid);
  * @par Sync (or) Async : Synchronous API.
  *
  * @param[in] appid
+ * @param[in] uid 	ID of the owner of the application
  *
  * @return 0 if success, negative value(<0) if fail\n
  * @retval	AIL_ERROR_OK					success
@@ -1117,18 +1121,19 @@ static ail_error_e _update_desktop(const char *appid)
  * @endcode
  */
 ail_error_e ail_desktop_update(const char *appid);
-
+ail_error_e ail_usr_desktop_update(const char *appid, uid_t uid);
 
 
 /**
  * @fn ail_error_e ail_desktop_remove(const char *appid)
- *
+ * @fn ail_error_e ail_usr_desktop_remove(const char *appid, uid_t uid)
  * @brief remove a app information in the Application Information Database.
 	And a notification is published to the applications who want to know about changing DB. 
  *
  * @par Sync (or) Async : Synchronous API.
  *
  * @param[in] appid
+ * @param[in]	uid	the addressee user id of the instruction
  *
  * @return 0 if success, negative value(<0) if fail\n
  * @retval	AIL_ERROR_OK					success
@@ -1162,15 +1167,17 @@ static ail_error_e _remove_desktop(const char *appid)
  * @endcode
  */
 ail_error_e ail_desktop_remove(const char *appid);
+ail_error_e ail_usr_desktop_remove(const char *appid, uid_t uid);
 
 /**
  * @fn ail_error_e ail_desktop_clean(const char *pkgid)
- *
+ * @fn ail_error_e ail_usr_desktop_clean(const char *pkgid, uid_t uid))
  * @brief clean a pkg information in the Application Information Database.
  *
  * @par Sync (or) Async : Synchronous API.
  *
  * @param[in] pkgid
+ * @param[in] uid 	ID of the owner of the application
  *
  * @return 0 if success, negative value(<0) if fail\n
  * @retval	AIL_ERROR_OK					success
@@ -1204,11 +1211,11 @@ static ail_error_e _clean_desktop(const char *pkgid)
  * @endcode
  */
 ail_error_e ail_desktop_clean(const char *pkgid);
-
+ail_error_e ail_usr_desktop_clean(const char *pkgid, uid_t uid);
 
 /**
  * @fn ail_error_e ail_desktop_fota(const char *appid)
- *
+ * @fn ail_error_e ail_usr_desktop_fota(const char *appid, uid_t uid)
  * @brief add a app information into Application Information Database.
 	A desktop file for this app has to be installed in the desktop directory before using this API.
 	If there is no database for Application Information Database, this API will create the DB.
@@ -1218,6 +1225,7 @@ ail_error_e ail_desktop_clean(const char *pkgid);
  * @par Sync (or) Async : Synchronous API.
  *
  * @param[in] appid
+ * @param[in]	uid	the addressee user id of the instruction
  *
  * @return 0 if success, negative value(<0) if fail\n
  * @retval	AIL_ERROR_OK					success
@@ -1251,16 +1259,17 @@ static ail_error_e _add_desktop_fota(const char *appid)
  * @endcode
  */
 ail_error_e ail_desktop_fota(const char *appid);
-
+ail_error_e ail_usr_desktop_fota(const char *appid, uid_t uid);
 /**
- * @fn ail_error_e ail_desktop_appinfo_modify_str(const char *appid, const char *property, const char *value, bool broadcast)
- *
+ *@fn ail_error_e ail_desktop_appinfo_modify_str(const char *appid, const char *property, const char *value, bool broadcast)
+ * @fn ail_error_e ail_desktop_appinfo_modify_usr_str(const char *appid, uid_t uid, const char *property, const char *value, bool broadcast)
  * @brief update a app information db.
 	And a notification is published to the applications who want to know about changing DB.
  *
  * @par Sync (or) Async : Synchronous API.
  *
  * @param[in] appid
+ * @param[in] uid 	ID of the owner of the application
  *
  * @return 0 if success, negative value(<0) if fail\n
  * @retval	AIL_ERROR_OK					success
@@ -1275,7 +1284,7 @@ ail_error_e ail_desktop_fota(const char *appid);
  * External Apps.
  *
  * @code
-static ail_error_e _appinfo_modify_str(const char *appid, const char *property, const char *value, bool broadcast)
+static ail_error_e _appinfo_modify_str(const char *appid, uid_t uid, const char *property, const char *value, bool broadcast)
 {
 	ail_error_e ret;
 
@@ -1300,7 +1309,7 @@ static ail_error_e _appinfo_modify_str(const char *appid, const char *property, 
  */
 
 ail_error_e ail_desktop_appinfo_modify_str(const char *appid, const char *property, const char *value, bool broadcast);
-
+ail_error_e ail_desktop_appinfo_modify_usr_str(const char *appid, uid_t uid, const char *property, const char *value, bool broadcast);
 /** @} */
 
 

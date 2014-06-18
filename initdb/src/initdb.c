@@ -60,7 +60,7 @@ static int initdb_count_app(void)
 		return -1;
 	}
 
-	ret = ail_filter_count_appinfo(filter, &total);
+	ret = ail_filter_count_appinfo(filter, &total, getuid());
 	if (ret != AIL_ERROR_OK) {
 		ail_filter_destroy(filter);
 		return -1;
@@ -135,7 +135,7 @@ int initdb_load_directory(const char *directory)
 			continue;
 		}
 
-		if (ail_desktop_add(package) != AIL_ERROR_OK) {
+		if (ail_desktop_add(package, getuid()) != AIL_ERROR_OK) {
 			_E("Failed to add a package[%s]", package);
 		} else {
 			ok_cnt++;
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
 	if (!__is_authorized()) {
 		fprintf(stderr, "You are not an authorized user!\n");
 		_D("You are not root user!\n");
-
+		exit(-1);
     }
     else {
 	const char *argv_rm[] = { "/bin/rm", APP_INFO_DB_FILE, NULL };

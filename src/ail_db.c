@@ -25,35 +25,175 @@
 #include <stdlib.h>
 #include <string.h>
 #include <db-util.h>
+#include <errno.h>
 #include <glib.h>
+#include <grp.h>
+#include <pwd.h>
+#include <sys/stat.h>
 #include "ail_private.h"
 #include "ail_db.h"
 
+#define GLOBAL_USER	0 //#define 	tzplatform_getenv(TZ_GLOBAL) //TODO
+#define BUFSIZE 4096
+#define QUERY_ATTACH "attach database '%s' as Global"
+#define QUERY_CREATE_VIEW_APP "CREATE temp VIEW app_info as select distinct * from (select  * from main.app_info m union select * from Global.app_info g)"
+
+#define QUERY_CREATE_VIEW_LOCAL "CREATE temp VIEW localname as select distinct * from (select  * from main.localname m union select * from Global.localname g)"
+
 #define retv_with_dbmsg_if(expr, val) do { \
 	if (expr) { \
-		_E("db_info.dbro: %s", sqlite3_errmsg(db_info.dbro)); \
-		_E("db_info.dbrw: %s", sqlite3_errmsg(db_info.dbrw)); \
-		_E("db_info.dbro errcode: %d", sqlite3_extended_errcode(db_info.dbro)); \
-		_E("db_info.dbrw errcode: %d", sqlite3_extended_errcode(db_info.dbrw)); \
+		_E("db_info.dbUserro: %s", sqlite3_errmsg(db_info.dbUserro)); \
+		_E("db_info.dbGlobalro: %s", sqlite3_errmsg(db_info.dbGlobalro)); \
+		_E("db_info.dbUserrw: %s", sqlite3_errmsg(db_info.dbUserrw)); \
+		_E("db_info.dbGlobalrw: %s", sqlite3_errmsg(db_info.dbGlobalrw)); \
+		_E("db_info.dbUserro errcode: %d", sqlite3_extended_errcode(db_info.dbUserro)); \
+		_E("db_info.dbGlobalro errcode: %d", sqlite3_extended_errcode(db_info.dbGlobalro)); \
+		_E("db_info.dbUserrw errcode: %d", sqlite3_extended_errcode(db_info.dbUserrw)); \
+		_E("db_info.dbGlobalrw errcode: %d", sqlite3_extended_errcode(db_info.dbGlobalrw)); \
 		return (val); \
 	} \
 } while (0)
 
-
 static __thread struct {
-        sqlite3         *dbro;
-        sqlite3         *dbrw;
+        sqlite3         *dbUserro;
+        sqlite3         *dbGlobalro;
+        sqlite3         *dbUserrw;
+        sqlite3         *dbGlobalrw;
 } db_info = {
-        .dbro = NULL,
-	.dbrw = NULL
+        .dbUserro = NULL,
+        .dbGlobalro = NULL,
+        .dbUserrw = NULL,
+        .dbGlobalrw = NULL
 };
+  static __thread      sqlite3         *dbInit = NULL;
 
-static char* getUserAppDB(void) 
+static int ail_db_change_perm(const char *db_file)
 {
-  if(getuid())
-    return tzplatform_mkpath(TZ_USER_HOME, ".applications/dbspace/.app_info.db"); 
-   else 
-    return APP_INFO_DB_FILE;
+	char buf[BUFSIZE];
+	char journal_file[BUFSIZE];
+	char *files[3];
+	int ret, i;
+	struct group *grpinfo = NULL;
+	const char *name = "users";
+
+	files[0] = (char *)db_file;
+	files[1] = journal_file;
+	files[2] = NULL;
+
+	retv_if(!db_file, AIL_ERROR_FAIL);
+	if(getuid()) //At this time we should be root to apply this
+			return AIL_ERROR_OK;
+
+	snprintf(journal_file, sizeof(journal_file), "%s%s", db_file, "-journal");
+
+	for (i = 0; files[i]; i++) {
+		grpinfo = getgrnam(name);
+		if(grpinfo == NULL)
+			_E("getgrnam(users) returns NULL !");
+
+		// Compare git_t type and not group name
+		ret = chown(files[i], OWNER_ROOT, grpinfo->gr_gid);
+		if (ret == -1) {
+			strerror_r(errno, buf, sizeof(buf));
+			_E("FAIL : chown %s %d.%d, because %s", db_file, OWNER_ROOT, grpinfo->gr_gid, buf);
+			return AIL_ERROR_FAIL;
+		}
+
+		ret = chmod(files[i], S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+		if (ret == -1) {
+			strerror_r(errno, buf, sizeof(buf));
+			_E("FAIL : chmod %s 0664, because %s", db_file, buf);
+			return AIL_ERROR_FAIL;
+		}
+	}
+
+	return AIL_ERROR_OK;
+}
+
+char* ail_get_icon_path(uid_t uid)
+{
+	char *result_psswd = NULL;
+	if(uid == GLOBAL_USER)
+	{
+		result_psswd = tzplatform_getenv(TZ_SYS_RW_ICONS);
+	}
+	else
+	{
+		const char *name = "users";
+		struct passwd *userinfo = NULL;
+		struct group *grpinfo = NULL;
+
+		userinfo = getpwuid(uid);
+		if(userinfo == NULL) {
+			_E("getpwuid(%d) returns NULL !", uid);
+			return NULL;
+		}
+		
+		grpinfo = getgrnam(name);
+		if(grpinfo == NULL) {
+			_E("getgrnam(users) returns NULL !");
+			return NULL;
+		}
+		// Compare git_t type and not group name
+		if (grpinfo->gr_gid != userinfo->pw_gid) {
+			_E("UID [%d] does not belong to 'users' group!", uid);
+			return NULL;
+		}
+		result_psswd = tzplatform_getenv(TZ_USER_ICONS);
+	}
+	return result_psswd;
+}
+
+static char* ail_get_app_DB(uid_t uid)
+{
+	char *result_psswd = NULL;
+	struct group *grpinfo = NULL;
+	char * dir = NULL;
+	if(uid == GLOBAL_USER)
+	{
+		result_psswd = strdup(APP_INFO_DB_FILE);
+		grpinfo = getgrnam("root");
+		if(grpinfo == NULL) {
+			_E("getgrnam(users) returns NULL !");
+		 	return NULL;
+		}
+	}
+	else
+	{
+		struct passwd *userinfo = getpwuid(uid);
+		if(userinfo == NULL) {
+			_E("getpwuid(%d) returns NULL !", uid);
+			return NULL;
+		}
+		grpinfo = getgrnam("users");
+		if(grpinfo == NULL) {
+			_E("getgrnam(users) returns NULL !");
+			return NULL;
+		}
+		// Compare git_t type and not group name
+		if (grpinfo->gr_gid != userinfo->pw_gid) {
+			_E("UID [%d] does not belong to 'users' group!", uid);
+			return NULL;
+		}
+		asprintf(&result_psswd, "%s/.applications/dbspace/.app_info.db", userinfo->pw_dir);
+	}
+
+	dir = strrchr(result_psswd, '/');
+	if(!dir)
+		return result_psswd;
+
+	//Control if db exist create otherwise 
+	if(access(dir + 1, F_OK)) {
+		int ret;
+		mkdir(dir + 1, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+		ret = chown(dir + 1, uid, grpinfo->gr_gid);
+		if (ret == -1) {
+			char buf[BUFSIZE];
+			strerror_r(errno, buf, sizeof(buf));
+			_E("FAIL : chown %s %d.%d, because %s", dir + 1, uid, grpinfo->gr_gid, buf);
+		}
+	}	
+	return result_psswd;
 }
 
 static ail_error_e db_do_prepare(sqlite3 *db, const char *query, sqlite3_stmt **stmt)
@@ -72,37 +212,139 @@ static ail_error_e db_do_prepare(sqlite3 *db, const char *query, sqlite3_stmt **
 		return AIL_ERROR_OK;
 }
 
-ail_error_e db_open(db_open_mode mode)
+ail_error_e db_open(db_open_mode mode, uid_t uid)
 {
 	int ret;
 	int changed = 0;
+	int i;
+	const char *tbls[3] = {
+		"CREATE TABLE app_info "
+		"(package TEXT PRIMARY KEY, "
+		"exec TEXT DEFAULT 'No Exec', "
+		"name TEXT DEFAULT 'No Name', "
+		"type TEXT DEFAULT 'Application', "
+		"icon TEXT DEFAULT 'No Icon', "
+		"categories TEXT, "
+		"version TEXT, "
+		"mimetype TEXT, "
+		"x_slp_service TEXT, "
+		"x_slp_packagetype TEXT, "
+		"x_slp_packagecategories TEXT, "
+		"x_slp_packageid TEXT, "
+		"x_slp_uri TEXT, "
+		"x_slp_svc TEXT, "
+		"x_slp_exe_path TEXT, "
+		"x_slp_appid TEXT, "
+		"x_slp_pkgid TEXT, "
+		"x_slp_domain TEXT, "
+		"x_slp_submodemainid TEXT, "
+		"x_slp_installedstorage TEXT, "
+		"x_slp_baselayoutwidth INTEGER DEFAULT 0, "
+		"x_slp_installedtime INTEGER DEFAULT 0, "
+		"nodisplay INTEGER DEFAULT 0, "
+		"x_slp_taskmanage INTEGER DEFAULT 1, "
+		"x_slp_multiple INTEGER DEFAULT 0, "
+		"x_slp_removable INTEGER DEFAULT 1, "
+		"x_slp_ishorizontalscale INTEGER DEFAULT 0, "
+		"x_slp_enabled INTEGER DEFAULT 1, "
+		"x_slp_submode INTEGER DEFAULT 0, "
+		"desktop TEXT UNIQUE NOT NULL);",
+		"CREATE TABLE localname (package TEXT NOT NULL, "
+		"locale TEXT NOT NULL, "
+		"name TEXT NOT NULL, "
+		"x_slp_pkgid TEXT NOT NULL, PRIMARY KEY (package, locale));",
 
-	if(mode & DB_OPEN_RO) {
-		if (!db_info.dbro) {
-			//ret = db_util_open_with_options(APP_INFO_DB, &db_info.dbro, SQLITE_OPEN_READONLY, NULL);
-			ret = db_util_open(getUserAppDB(), &db_info.dbro, 0);
-			retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+		NULL
+	};
+
+	if (access(ail_get_app_DB(uid), F_OK)) {
+		if (AIL_ERROR_OK == db_util_open_with_options(ail_get_app_DB(uid), &dbInit, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL))
+		{
+			for (i = 0; tbls[i] != NULL; i++) {
+				ret = do_db_exec(tbls[i], dbInit);
+				retv_if(ret != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
+			}
+		} else {
+			dbInit = NULL;
+			_E("Failed to create table %s\n",ail_get_app_DB(uid));
 		}
+	}
+	if(dbInit) {
+		if(AIL_ERROR_OK != ail_db_change_perm(ail_get_app_DB(uid))) {
+				_E("Failed to change permission\n");
+		}
+		ret = sqlite3_close(dbInit);
+		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+		dbInit = NULL;
+	}
+	if(mode & DB_OPEN_RO) {
+		if (!db_info.dbUserro) {
+			db_util_open_with_options(ail_get_app_DB(uid), &db_info.dbUserro, SQLITE_OPEN_READONLY, NULL);
+			char query_attach[AIL_SQL_QUERY_MAX_LEN];
+			char query_view_app[AIL_SQL_QUERY_MAX_LEN];
+			char query_view_local[AIL_SQL_QUERY_MAX_LEN];
+			snprintf(query_attach, AIL_SQL_QUERY_MAX_LEN, QUERY_ATTACH, ail_get_app_DB(GLOBAL_USER));
+			_E("info : execute query_attach : %s", query_attach );
+			if (db_exec_usr_ro(query_attach) < 0) {
+				return AIL_ERROR_DB_FAILED;
+			}
+			snprintf(query_view_app, AIL_SQL_QUERY_MAX_LEN, QUERY_CREATE_VIEW_APP);
+			_E("info : execute query_attach : %s", query_view_app );
+			if (db_exec_usr_ro(query_view_app) < 0) {
+				return AIL_ERROR_DB_FAILED;
+			}
+
+			snprintf(query_view_local, AIL_SQL_QUERY_MAX_LEN, QUERY_CREATE_VIEW_LOCAL);
+			_E("info : execute query_attach : %s", query_view_local );
+			if (db_exec_usr_ro(query_view_local) < 0) {
+				return AIL_ERROR_DB_FAILED;
+			}
+		}
+		if (!db_info.dbGlobalro) {
+				ret = db_util_open_with_options(ail_get_app_DB(GLOBAL_USER), &db_info.dbGlobalro, SQLITE_OPEN_READONLY, NULL);
+				retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+			}
 	}
 
 	if(mode & DB_OPEN_RW) {
-		if (!db_info.dbrw) {
-			ret = db_util_open(getUserAppDB(), &db_info.dbrw, 0);
-			retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+		//if (__is_admin) {
+		if(uid != GLOBAL_USER) {//TOCHANGETO is_admin
+			if(!db_info.dbUserrw){
+				ret = db_util_open(ail_get_app_DB(uid), &db_info.dbUserrw, 0);
+			}
+		} else {
+			if(!db_info.dbGlobalrw){
+				ret = db_util_open(ail_get_app_DB(GLOBAL_USER), &db_info.dbGlobalrw, 0);
+			}
 		}
+		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+	
+		//}
 	}
 
 	return AIL_ERROR_OK;
 }
 
+
 ail_error_e db_prepare(const char *query, sqlite3_stmt **stmt)
 {
-	return db_do_prepare(db_info.dbro, query, stmt);
+	return db_do_prepare(db_info.dbUserro, query, stmt);
+}
+
+ail_error_e db_prepare_globalro(const char *query, sqlite3_stmt **stmt)
+{
+	return db_do_prepare(db_info.dbGlobalro, query, stmt);
 }
 
 ail_error_e db_prepare_rw(const char *query, sqlite3_stmt **stmt)
 {
-	return db_do_prepare(db_info.dbrw, query, stmt);
+	return db_do_prepare(db_info.dbUserrw, query, stmt);
+}
+
+
+ail_error_e db_prepare_globalrw(const char *query, sqlite3_stmt **stmt)
+{
+	return db_do_prepare(db_info.dbGlobalrw, query, stmt);
 }
 
 
@@ -233,15 +475,15 @@ ail_error_e db_finalize(sqlite3_stmt *stmt)
 
 
 
-ail_error_e db_exec(const char *query)
+ail_error_e do_db_exec(const char *query, sqlite3 * fileSQL)
 {
 	int ret;
 	char *errmsg;
 
 	retv_if(!query, AIL_ERROR_INVALID_PARAMETER);
-	retv_if(!db_info.dbrw, AIL_ERROR_DB_FAILED);
+	retv_if(!fileSQL, AIL_ERROR_DB_FAILED);
 
-	ret = sqlite3_exec(db_info.dbrw, query, NULL, NULL, &errmsg);
+	ret = sqlite3_exec(fileSQL, query, NULL, NULL, &errmsg);
 	if (ret != SQLITE_OK) {
 		_E("Cannot execute this query - %s. because %s",
 				query, errmsg? errmsg:"uncatched error");
@@ -254,21 +496,49 @@ ail_error_e db_exec(const char *query)
 
 
 
+ail_error_e db_exec_usr_rw(const char *query)
+{
+	return do_db_exec(query, db_info.dbUserrw);
+}
+
+
+ail_error_e db_exec_usr_ro(const char *query)
+{
+	return do_db_exec(query, db_info.dbUserro);
+}
+
+ail_error_e db_exec_glo_ro(const char *query)
+{
+	return do_db_exec(query, db_info.dbGlobalro);
+}
+
+ail_error_e db_exec_glo_rw(const char *query)
+{
+	return do_db_exec(query, db_info.dbGlobalrw);
+}
+
+
 ail_error_e db_close(void)
 {
 	int ret;
 
-	if(db_info.dbro) {
-		ret = sqlite3_close(db_info.dbro);
+	if(db_info.dbUserro) {
+		ret = sqlite3_close(db_info.dbUserro);
 		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 
-		db_info.dbro = NULL;
+		db_info.dbUserro = NULL;
 	}
-	if(db_info.dbrw) {
-		ret = sqlite3_close(db_info.dbrw);
+	if(db_info.dbGlobalrw) {
+		ret = sqlite3_close(db_info.dbGlobalrw);
 		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 
-		db_info.dbrw = NULL;
+		db_info.dbGlobalrw = NULL;
+	}
+	if(db_info.dbUserrw) {
+		ret = sqlite3_close(db_info.dbUserrw);
+		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+
+		db_info.dbUserrw = NULL;
 	}
 
 	return AIL_ERROR_OK;
@@ -282,12 +552,23 @@ EXPORT_API ail_error_e ail_db_close(void)
 int db_exec_sqlite_query(char *query, sqlite_query_callback callback, void *data)
 {
 	char *error_message = NULL;
-	if (SQLITE_OK !=
-	    sqlite3_exec(db_info.dbro, query, callback, data, &error_message)) {
-		_E("Don't execute query = %s error message = %s\n", query,
-		       error_message);
-		sqlite3_free(error_message);
-		return -1;
+	if(db_info.dbUserro) {
+		if (SQLITE_OK !=
+			sqlite3_exec(db_info.dbUserro, query, callback, data, &error_message)) {
+			_E("Don't execute query = %s error message = %s\n", query,
+				error_message);
+			sqlite3_free(error_message);
+			return -1;
+		}
+	}
+	if(db_info.dbUserro) {
+		if (SQLITE_OK !=
+			sqlite3_exec(db_info.dbUserro, query, callback, data, &error_message)) {
+			_E("Don't execute query = %s error message = %s\n", query,
+				error_message);
+			sqlite3_free(error_message);
+			return -1;
+		}
 	}
 	sqlite3_free(error_message);
 	return 0;

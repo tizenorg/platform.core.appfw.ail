@@ -59,7 +59,6 @@ static int initdb_count_app(void)
 		ail_filter_destroy(filter);
 		return -1;
 	}
-
 	ret = ail_filter_count_appinfo(filter, &total);
 	if (ret != AIL_ERROR_OK) {
 		ail_filter_destroy(filter);

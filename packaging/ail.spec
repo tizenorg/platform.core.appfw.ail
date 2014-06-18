@@ -40,8 +40,9 @@ export CXXFLAGS="$CXXFLAGS ?DTIZEN_ENGINEER_MODE"
 export FFLAGS="$FFLAGS -DTIZEN_ENGINEER_MODE"
 %endif
 
-%cmake .  -DBUILD_PKGTYPE=rpm \
-          -DSMACK=Off
+%cmake .  -DTZ_SYS_RW_DESKTOP_APP=%TZ_SYS_RW_DESKTOP_APP \
+          -DBUILD_PKGTYPE=rpm \
+		  -DSMACK=Off
 
 %__make %{?_smp_mflags}
 

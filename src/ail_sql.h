@@ -29,7 +29,7 @@
 #define SQL_TBL_APP_INFO "app_info"
 #define SQL_TBL_APP_INFO_WITH_LOCALNAME "app_info LEFT OUTER JOIN localname " \
 					"ON app_info.package=localname.package " \
-					"and locale='%s'"
+					"and localname.locale='%s'"
 
 #define SQL_FLD_APP_INFO "app_info.PACKAGE," \
 			"app_info.EXEC," \

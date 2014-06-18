@@ -252,7 +252,74 @@ EXPORT_API ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *cnt)
 
 	retv_if(!cnt, AIL_ERROR_INVALID_PARAMETER);
 
-	if (db_open(DB_OPEN_RO) != AIL_ERROR_OK)
+	if (db_open(DB_OPEN_RO, GLOBAL_USER) != AIL_ERROR_OK)
+		return AIL_ERROR_DB_FAILED;
+
+	snprintf(q, sizeof(q), "SELECT %s FROM %s", SQL_FLD_APP_INFO_WITH_LOCALNAME, SQL_TBL_APP_INFO_WITH_LOCALNAME);
+
+	tmp_q = strdup(q);
+	retv_if (NULL == tmp_q, AIL_ERROR_OUT_OF_MEMORY);
+	l = sql_get_locale();
+	if (NULL == l) {
+		_E("Failed to get locale string");
+		free(tmp_q);
+		return AIL_ERROR_FAIL;
+	}
+	snprintf(q, sizeof(q), tmp_q, l);
+	free(l);
+	free(tmp_q);
+
+	if (filter && filter->list) {
+		w = _get_where_clause(filter);
+		retv_if (NULL == w, AIL_ERROR_FAIL);
+		strncat(q, w, sizeof(q)-strlen(q)-1);
+		q[sizeof(q)-1] = '\0';
+		free(w);
+	}
+	else
+		_D("No filter exists. All records are retreived");
+//is_admin
+	if (db_prepare(q, &stmt) != AIL_ERROR_OK) {
+		_E("db_prepare fail for query = %s",q);
+		return AIL_ERROR_DB_FAILED;
+	}
+/*	if (db_prepare(q, &stmt) != AIL_ERROR_OK) {
+		_E("db_prepare fail for query = %s",q);
+		return AIL_ERROR_DB_FAILED;
+	}*/
+	ai = appinfo_create();
+
+	appinfo_set_stmt(ai, stmt);
+	while (db_step(stmt) == AIL_ERROR_OK) {
+
+		if(_appinfo_check_installed_storage(ai) != AIL_ERROR_OK)
+			continue;
+
+		filter_count++;
+	}
+
+	db_finalize(stmt);
+
+	appinfo_destroy(ai);
+	*cnt = filter_count;
+
+	return AIL_ERROR_OK;
+}
+
+EXPORT_API ail_error_e ail_filter_count_usr_appinfo(ail_filter_h filter, int *cnt, uid_t uid)
+{
+	char q[AIL_SQL_QUERY_MAX_LEN];
+	char *w;
+	char *tmp_q;
+	char *l;
+	ail_cb_ret_e r;
+	sqlite3_stmt *stmt;
+	ail_appinfo_h ai;
+	int filter_count = 0;
+
+	retv_if(!cnt, AIL_ERROR_INVALID_PARAMETER);
+
+	if (db_open(DB_OPEN_RO, uid) != AIL_ERROR_OK)
 		return AIL_ERROR_DB_FAILED;
 
 	snprintf(q, sizeof(q), "SELECT %s FROM %s", SQL_FLD_APP_INFO_WITH_LOCALNAME, SQL_TBL_APP_INFO_WITH_LOCALNAME);
@@ -283,7 +350,6 @@ EXPORT_API ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *cnt)
 		_E("db_prepare fail for query = %s",q);
 		return AIL_ERROR_DB_FAILED;
 	}
-
 	ai = appinfo_create();
 
 	appinfo_set_stmt(ai, stmt);
@@ -303,6 +369,7 @@ EXPORT_API ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *cnt)
 	return AIL_ERROR_OK;
 }
 
+
 EXPORT_API ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_list_appinfo_cb cb, void *user_data)
 {
 	char q[AIL_SQL_QUERY_MAX_LEN];
@@ -315,7 +382,7 @@ EXPORT_API ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_
 
 	retv_if (NULL == cb, AIL_ERROR_INVALID_PARAMETER);
 
-	if (db_open(DB_OPEN_RO) != AIL_ERROR_OK)
+	if (db_open(DB_OPEN_RO, GLOBAL_USER) != AIL_ERROR_OK)
 		return AIL_ERROR_DB_FAILED;
 
 	snprintf(q, sizeof(q), "SELECT %s FROM %s", SQL_FLD_APP_INFO_WITH_LOCALNAME, SQL_TBL_APP_INFO_WITH_LOCALNAME);
@@ -345,17 +412,21 @@ EXPORT_API ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_
 		_D("No filter exists. All records are retreived");
 
 //	_D("Query = %s",q);
-
-	if (db_prepare(q, &stmt) != AIL_ERROR_OK) {
+//is_admin
+	if (db_prepare_globalro(q, &stmt) != AIL_ERROR_OK) {
 		_E("db_prepare fail for query = %s",q);
 		return AIL_ERROR_DB_FAILED;
 	}
-
+	/*if (db_prepare_globalro(q, &stmt) != AIL_ERROR_OK) {
+		_E("db_prepare fail for query = %s",q);
+		return AIL_ERROR_DB_FAILED;
+	}*/
 	ai = appinfo_create();
 
 	appinfo_set_stmt(ai, stmt);
-	while (db_step(stmt) == AIL_ERROR_OK) {
-
+	uint i = 0;
+	while (i = db_step(stmt) == AIL_ERROR_OK) {
+		_E("------------------------dbstep : %u\n", i);
 		if(_appinfo_check_installed_storage(ai) != AIL_ERROR_OK)
 			continue;
 
@@ -366,7 +437,68 @@ EXPORT_API ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_
 	appinfo_destroy(ai);
 
 	db_finalize(stmt);
-
 	return AIL_ERROR_OK;
 }
 
+EXPORT_API ail_error_e ail_filter_list_usr_appinfo_foreach(ail_filter_h filter, ail_list_appinfo_cb cb, void *user_data, uid_t uid)
+{
+	char q[AIL_SQL_QUERY_MAX_LEN];
+	char *tmp_q;
+	char *w;
+	char *l;
+	ail_cb_ret_e r;
+	sqlite3_stmt *stmt;
+	ail_appinfo_h ai;
+
+	retv_if (NULL == cb, AIL_ERROR_INVALID_PARAMETER);
+
+	if (db_open(DB_OPEN_RO, uid) != AIL_ERROR_OK)
+		return AIL_ERROR_DB_FAILED;
+
+	snprintf(q, sizeof(q), "SELECT %s FROM %s", SQL_FLD_APP_INFO_WITH_LOCALNAME, SQL_TBL_APP_INFO_WITH_LOCALNAME);
+
+	tmp_q = strdup(q);
+	retv_if (NULL == tmp_q, AIL_ERROR_OUT_OF_MEMORY);
+	l = sql_get_locale();
+	if (NULL == l) {
+		_E("Failed to get locale string");
+		free(tmp_q);
+		return AIL_ERROR_FAIL;
+	}
+	snprintf(q, sizeof(q), tmp_q, l);
+	free(l);
+	free(tmp_q);
+
+	if (filter && filter->list) {
+		w = _get_where_clause(filter);
+		retv_if (NULL == w, AIL_ERROR_FAIL);
+		strncat(q, w, sizeof(q)-strlen(q)-1);
+		q[sizeof(q)-1] = '\0';
+		strncat(q, " order by app_info.package", sizeof(q)-strlen(q)-1);
+		q[sizeof(q)-1] = '\0';
+		free(w);
+	}
+	else
+		_D("No filter exists. All records are retreived");
+
+//is_admin
+	if (db_prepare(q, &stmt) != AIL_ERROR_OK) {
+		_E("db_prepare fail for query = %s",q);
+		return AIL_ERROR_DB_FAILED;
+	}
+	ai = appinfo_create();
+	appinfo_set_stmt(ai, stmt);
+	uint i = 0;
+	while (i = db_step(stmt) == AIL_ERROR_OK) {
+		if(_appinfo_check_installed_storage(ai) != AIL_ERROR_OK)
+			continue;
+
+		r = cb(ai, user_data);
+		if (AIL_CB_RET_CANCEL == r)
+			break;
+	}
+	appinfo_destroy(ai);
+
+	db_finalize(stmt);
+	return AIL_ERROR_OK;
+}

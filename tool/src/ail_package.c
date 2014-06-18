@@ -102,7 +102,7 @@ static int _get_property(const char *property)
 
 
 
-static ail_error_e _get_appinfo(const char *package, const char *property)
+static ail_error_e _get_appinfo(const char *package, const char *property, uid_t uid)
 {
 	ail_appinfo_h handle;
 	ail_error_e ret;
@@ -112,7 +112,7 @@ static ail_error_e _get_appinfo(const char *package, const char *property)
 	struct element e;
 	struct element *p;
 	int t;
-
+    //__isadmin)
 	ret = ail_package_get_appinfo(package, &handle);
 	if (ret != AIL_ERROR_OK) {
 		return AIL_ERROR_FAIL;
@@ -163,7 +163,7 @@ int main(int argc, char** argv)
 
 	if (4 == argc) {
 		if (!strncmp(argv[1], "get", 3)) {
-			ret = _get_appinfo(argv[2], argv[3]);
+			ret = _get_appinfo(argv[2], argv[3], getuid());
 		}
 	}
 	else {

@@ -42,7 +42,7 @@
 #endif
 #define _D(fmt, arg...) fprintf(stderr, "[AIL_INITDB][D][%s,%d] "fmt"\n", __FUNCTION__, __LINE__, ##arg);
 
-static int initdb_count_app(void)
+static int initdb_count_app(uid_t uid)
 {
 	ail_filter_h filter;
 	ail_error_e ret;
@@ -58,8 +58,9 @@ static int initdb_count_app(void)
 		ail_filter_destroy(filter);
 		return -1;
 	}
-
-	ret = ail_filter_count_appinfo(filter, &total);
+//__isadmin
+	ret = ail_filter_count_usr_appinfo(filter,  &total, uid);
+	//ret = ail_filter_count_appinfo(filter,  &total);
 	if (ret != AIL_ERROR_OK) {
 		ail_filter_destroy(filter);
 		return -1;
@@ -246,7 +247,7 @@ int main(int argc, char *argv[])
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);
 
-	ret = initdb_count_app();
+	ret = initdb_count_app(getuid());
 	if (ret > 0) {
 		_D("Some Apps in the App Info DB.");
 	}

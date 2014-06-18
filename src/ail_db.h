@@ -36,9 +36,13 @@ typedef enum {
 } db_open_mode;
 typedef int (*sqlite_query_callback)(void *data, int ncols, char **coltxt, char **colname);
 
-ail_error_e db_open(db_open_mode mode);
+static int ail_db_change_perm(const char *db_file);
+char* ail_get_icon_path(uid_t uid);
+ail_error_e db_open(db_open_mode mode, uid_t uid);
 ail_error_e db_prepare(const char *query, sqlite3_stmt **stmt);
+ail_error_e db_prepare_globalro(const char *query, sqlite3_stmt **stmt);
 ail_error_e db_prepare_rw(const char *query, sqlite3_stmt **stmt);
+ail_error_e db_prepare_globalrw(const char *query, sqlite3_stmt **stmt);
 
 ail_error_e db_bind_bool(sqlite3_stmt *stmt, int idx, bool value);
 ail_error_e db_bind_int(sqlite3_stmt *stmt, int idx, int value);
@@ -53,8 +57,9 @@ ail_error_e db_column_str(sqlite3_stmt *stmt, int index, char **str);
 ail_error_e db_reset(sqlite3_stmt *stmt);
 ail_error_e db_finalize(sqlite3_stmt *stmt);
 
-
-ail_error_e db_exec(const char *query);
+ail_error_e do_db_exec(const char *query,sqlite3 * fileSQL);
+ail_error_e db_exec_usr_rw(const char *query);
+ail_error_e db_exec_usr_ro(const char *query);
 ail_error_e db_close(void);
 int db_exec_sqlite_query(char *query, sqlite_query_callback callback, void *data);
 #endif

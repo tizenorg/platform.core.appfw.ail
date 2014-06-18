@@ -150,7 +150,7 @@ static int _get_cmd(const char *arg)
 	return r;
 }
 
-ail_cb_ret_e appinfo_list_func(const ail_appinfo_h appinfo, void *user_data)
+ail_cb_ret_e appinfo_list_func(const ail_appinfo_h appinfo,  void *user_data)
 {
 	char *rs = NULL;
 	int t=-1;
