@@ -1,6 +1,6 @@
 Name:           ail
 Version:        0.2.80
-Release:        1
+Release:        0
 License:        Apache-2.0
 Summary:        Application Information Library
 Group:          Application Framework/Libraries
@@ -17,15 +17,15 @@ BuildRequires:  pkgconfig(libtzplatform-config)
 Provides:       libail = %{version}-%{release}
 
 %description
-Application Information Library
+Application Information Library package
 
 %package devel
 Summary:        Application Information Library Development files
 Requires:       libail = %{version}-%{release}
-Requires:		pkgconfig(libtzplatform-config)
+Requires:       pkgconfig(libtzplatform-config)
 
 %description devel
-Application Information Library (devel)
+Application Information Library Development files package
 
 %prep
 %setup -q
@@ -41,9 +41,9 @@ export FFLAGS="$FFLAGS -DTIZEN_ENGINEER_MODE"
 %endif
 
 %cmake .  -DBUILD_PKGTYPE=rpm \
-		  -DSMACK=Off
+          -DSMACK=Off
 
-make %{?_smp_mflags}
+%__make %{?_smp_mflags}
 
 %install
 %make_install
@@ -80,7 +80,7 @@ update_DAC_for_db_file()
                 echo "Failed to change the perms of $@"
         fi
 }
-ail_initdb
+ail_initdb 2>/dev/null
 mkdir -p %{TZ_SYS_RO_DESKTOP_APP}
 mkdir -p %{TZ_SYS_RW_DESKTOP_APP}
 mkdir -p %{TZ_SYS_DB}
@@ -92,9 +92,8 @@ chsmack -a 'User' %{TZ_SYS_DB}/.app_info.db*
 %postun
 /sbin/ldconfig
 if [ $1 == 0 ]; then
-rm -f %{TZ_SYS_DB}/.app_info.db*
+    rm -f %{TZ_SYS_DB}/.app_info.db*
 fi
-
 
 %files
 %manifest %{name}.manifest
