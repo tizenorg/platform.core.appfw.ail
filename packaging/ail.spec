@@ -10,6 +10,7 @@ BuildRequires:  cmake
 BuildRequires:  vconf-keys-devel
 BuildRequires:  pkgconfig(db-util)
 BuildRequires:  pkgconfig(dlog)
+BuildRequires:  pkgconfig(libsmack)
 BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(xdgmime)

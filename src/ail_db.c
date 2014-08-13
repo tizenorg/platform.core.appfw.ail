@@ -29,6 +29,7 @@
 #include <glib.h>
 #include <grp.h>
 #include <pwd.h>
+#include <sys/smack.h>
 #include <sys/stat.h>
 #include "ail_private.h"
 #include "ail_db.h"
@@ -192,7 +193,14 @@ static char* ail_get_app_DB(uid_t uid)
 			strerror_r(errno, buf, sizeof(buf));
 			_E("FAIL : chown %s %d.%d, because %s", dir + 1, uid, grpinfo->gr_gid, buf);
 		}
-	}	
+    /* chsmack */
+    if(smack_setlabel(result_psswd, "_", SMACK_LABEL_ACCESS))
+	  {
+		  _E("failed chsmack -a \"_\" %s", result_psswd);
+	  } else {
+		  _D("chsmack -a \"_\" %s", result_psswd);
+	  }
+	}
 	return result_psswd;
 }
 
