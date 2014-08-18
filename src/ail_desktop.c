@@ -43,6 +43,7 @@
 #include "ail.h"
 
 #define BUFSIZE 4096
+#define GLOBAL_USER 0
 
 #define whitespace(c) (((c) == ' ') || ((c) == '\t'))
 #define argsdelimiter	" \t"
@@ -272,43 +273,27 @@ _get_icon_with_path(char* icon, uid_t uid)
 		len = (0x01 << 7) + strlen(icon) + strlen(package) + strlen(theme);
 		icon_with_path = malloc(len);
 		if(icon_with_path == NULL) {
-			_E("(icon_with_path == NULL) return\n");
+			_E("icon_with_path == NULL\n");
 			free(package);
 			free(theme);
 			return NULL;
 		}
 
 		memset(icon_with_path, 0, len);
-
-		sqlite3_snprintf( len, icon_with_path,"%s/%q/small/%q", ail_get_icon_path(uid), theme, icon);
-		do {
-			if (access(icon_with_path, R_OK) == 0) break;
-			sqlite3_snprintf( len, icon_with_path,"%s/%q/small/%q", tzplatform_getenv(TZ_SYS_RO_ICONS), theme, icon);
-			if (access(icon_with_path, R_OK) == 0) break;
-			_D("cannot find icon %s", icon_with_path);
-			sqlite3_snprintf( len, icon_with_path, "%s/default/small/%q", ail_get_icon_path(uid), icon);
-			if (access(icon_with_path, R_OK) == 0) break;
-			sqlite3_snprintf( len, icon_with_path, "%s/default/small/%q", tzplatform_getenv(TZ_SYS_RO_ICONS), icon);
-			if (access(icon_with_path, R_OK) == 0) break;
-
-			#if 1 /* this will be remove when finish the work for moving icon path */
-			_E("icon file must be moved to %s", icon_with_path);
-			sqlite3_snprintf( len, icon_with_path,  "%s/%q/res/icons/%q/small/%q", tzplatform_getenv(TZ_SYS_RW_APP), package, theme, icon);
-			if (access(icon_with_path, R_OK) == 0) break;
+		if (uid != GLOBAL_USER)
+			sqlite3_snprintf( len, icon_with_path, "%s%q", ail_get_icon_path(uid), icon);
+		else
+			sqlite3_snprintf( len, icon_with_path, "%s/%q/small/%q", ail_get_icon_path(GLOBAL_USER), theme, icon);
+		if (!access (icon_with_path, F_OK))
 			sqlite3_snprintf( len, icon_with_path, "%s/%q/res/icons/%q/small/%q", tzplatform_getenv(TZ_SYS_RO_APP), package, theme, icon);
-			if (access(icon_with_path, R_OK) == 0) break;
-			_D("cannot find icon %s", icon_with_path);
-			sqlite3_snprintf( len, icon_with_path, "%s/%q/res/icons/default/small/%q", tzplatform_getenv(TZ_SYS_RW_APP), package, icon);
-			if (access(icon_with_path, R_OK) == 0) break;
-			sqlite3_snprintf( len, icon_with_path, "%s/%q/res/icons/default/small/%q", tzplatform_getenv(TZ_SYS_RO_APP), package, icon);
-			if (access(icon_with_path, R_OK) == 0) break;
-			#endif
-		} while (0);
-
+		else if (!access (icon_with_path, F_OK))
+			sqlite3_snprintf( len, icon_with_path, "%s/%q/res/icons/%q/small/%q", tzplatform_getenv(TZ_SYS_RW_APP), package, theme, icon);
+		else
+			_D("Cannot find icon path");
 		free(theme);
 		free(package);
+		_D("Icon path : %s", icon_with_path);
 
-		_D("Icon path : %s ---> %s", icon, icon_with_path);
 
 		return icon_with_path;
 	} else {
@@ -802,46 +787,7 @@ char *_pkgname_to_desktop(const char *package, uid_t uid)
 
 	retv_if(!package, NULL);
 
-	if(uid != GLOBAL_USER)
-    {
-    desktop_path = tzplatform_mkpath(TZ_USER_HOME, ".applications/desktop");
-    if(access(desktop_path, F_OK)) {
-		struct group *grpinfo = NULL;
-		const char *name = "users"; //to change
-		int ret;
-		char buf[BUFSIZE];
-		mkdir(desktop_path, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-		grpinfo = getgrnam(name);
-		if(grpinfo == NULL)
-			_E("getgrnam(users) returns NULL !");
-
-		ret = chown(desktop_path, uid, grpinfo->gr_gid);
-		if (ret == -1) {
-			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", desktop_path, uid, grpinfo->gr_gid, buf);
-		}	
-	}
-  }
-  else
-  {
-    desktop_path = tzplatform_getenv(TZ_SYS_RW_DESKTOP_APP);
-    if(access(desktop_path, F_OK)) {
-		struct group *grpinfo = NULL;
-		const char *name = "root"; //to change
-		int ret;
-		char buf[BUFSIZE];
-		mkdir(desktop_path, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-		grpinfo = getgrnam(name);
-		if(grpinfo == NULL)
-			_E("getgrnam(users) returns NULL !");
-
-		ret = chown(desktop_path, uid, grpinfo->gr_gid);
-		if (ret == -1) {
-			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", desktop_path, uid, grpinfo->gr_gid, buf);
-		}	
-	}
-  }
+  desktop_path = al_get_desktop_path(uid);
 
 	size = strlen(desktop_path) + strlen(package) + 10;
 	desktop = malloc(size);

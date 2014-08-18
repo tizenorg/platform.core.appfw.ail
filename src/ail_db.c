@@ -41,6 +41,8 @@
 
 #define QUERY_CREATE_VIEW_LOCAL "CREATE temp VIEW localname as select distinct * from (select  * from main.localname m union select * from Global.localname g)"
 
+#define SMACK_LABEL "_"
+
 #define retv_with_dbmsg_if(expr, val) do { \
 	if (expr) { \
 		_E("db_info.dbUserro: %s", sqlite3_errmsg(db_info.dbUserro)); \
@@ -113,61 +115,19 @@ static int ail_db_change_perm(const char *db_file)
 
 char* ail_get_icon_path(uid_t uid)
 {
-	char *result_psswd = NULL;
-	if(uid == GLOBAL_USER)
-	{
-		result_psswd = tzplatform_getenv(TZ_SYS_RW_ICONS);
-	}
-	else
-	{
-		const char *name = "users";
-		struct passwd *userinfo = NULL;
-		struct group *grpinfo = NULL;
-
-		userinfo = getpwuid(uid);
-		if(userinfo == NULL) {
-			_E("getpwuid(%d) returns NULL !", uid);
-			return NULL;
-		}
-		
-		grpinfo = getgrnam(name);
-		if(grpinfo == NULL) {
-			_E("getgrnam(users) returns NULL !");
-			return NULL;
-		}
-		// Compare git_t type and not group name
-		if (grpinfo->gr_gid != userinfo->pw_gid) {
-			_E("UID [%d] does not belong to 'users' group!", uid);
-			return NULL;
-		}
-		result_psswd = tzplatform_getenv(TZ_USER_ICONS);
-	}
-	return result_psswd;
-}
-
-static char* ail_get_app_DB(uid_t uid)
-{
-	char *result_psswd = NULL;
+	char *result = NULL;
 	struct group *grpinfo = NULL;
-	char * dir = NULL;
-	if(uid == GLOBAL_USER)
-	{
-		result_psswd = strdup(APP_INFO_DB_FILE);
-		grpinfo = getgrnam("root");
-		if(grpinfo == NULL) {
-			_E("getgrnam(users) returns NULL !");
-		 	return NULL;
-		}
-	}
-	else
-	{
-		struct passwd *userinfo = getpwuid(uid);
-		if(userinfo == NULL) {
+	char *dir = NULL;
+	struct passwd *userinfo = getpwuid(uid);
+
+	if (uid != GLOBAL_USER) {
+
+		if (userinfo == NULL) {
 			_E("getpwuid(%d) returns NULL !", uid);
 			return NULL;
 		}
 		grpinfo = getgrnam("users");
-		if(grpinfo == NULL) {
+		if (grpinfo == NULL) {
 			_E("getgrnam(users) returns NULL !");
 			return NULL;
 		}
@@ -176,33 +136,156 @@ static char* ail_get_app_DB(uid_t uid)
 			_E("UID [%d] does not belong to 'users' group!", uid);
 			return NULL;
 		}
-		asprintf(&result_psswd, "%s/.applications/dbspace/.app_info.db", userinfo->pw_dir);
+		asprintf(&result, "%s/.applications/icons/", userinfo->pw_dir);
+	} else {
+		result = tzplatform_mkpath(TZ_SYS_RW_ICONS, "/");
+		grpinfo = getgrnam("root");
+		if (grpinfo == NULL) {
+			_E("getgrnam(root) returns NULL !");
+			return NULL;
+			}
+			if (grpinfo->gr_gid != userinfo->pw_gid) {
+				_E("UID [%d] does not belong to 'root' group!", uid);
+				return NULL;
+			}
+			/* chsmack */
+			if (smack_setlabel(result, SMACK_LABEL, SMACK_LABEL_ACCESS)) {
+				_E("failed chsmack -a \"%s\" %s", SMACK_LABEL, result);
+			} else {
+			_D("chsmack -a \"%s\" %s", SMACK_LABEL, result);
+			}
 	}
-
-	dir = strrchr(result_psswd, '/');
-	if(!dir)
-		return result_psswd;
-
-	//Control if db exist create otherwise 
-	if(access(dir + 1, F_OK)) {
-		int ret;
-		mkdir(dir + 1, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-		ret = chown(dir + 1, uid, grpinfo->gr_gid);
-		if (ret == -1) {
-			char buf[BUFSIZE];
-			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", dir + 1, uid, grpinfo->gr_gid, buf);
-		}
-    /* chsmack */
-    if(smack_setlabel(result_psswd, "_", SMACK_LABEL_ACCESS))
-	  {
-		  _E("failed chsmack -a \"_\" %s", result_psswd);
-	  } else {
-		  _D("chsmack -a \"_\" %s", result_psswd);
-	  }
+	int ret;
+	mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+	ret = chown(result, uid, grpinfo->gr_gid);
+	if (ret == -1) {
+		char buf[BUFSIZE];
+		strerror_r(errno, buf, sizeof(buf));
+		_E("FAIL : chown %s %d.%d, because %s", result, uid, grpinfo->gr_gid, buf);
 	}
-	return result_psswd;
+	return result;
 }
+
+static char* ail_get_app_DB(uid_t uid)
+{
+	char *result = NULL;
+	char *journal = NULL;
+	struct group *grpinfo = NULL;
+	char *dir = NULL;
+	struct passwd *userinfo = getpwuid(uid);
+
+	if (uid != GLOBAL_USER) {
+
+		if (userinfo == NULL) {
+			_E("getpwuid(%d) returns NULL !", uid);
+			return NULL;
+		}
+		grpinfo = getgrnam("users");
+		if (grpinfo == NULL) {
+			_E("getgrnam(users) returns NULL !");
+			return NULL;
+		}
+		// Compare git_t type and not group name
+		if (grpinfo->gr_gid != userinfo->pw_gid) {
+			_E("UID [%d] does not belong to 'users' group!", uid);
+			return NULL;
+		}
+		asprintf(&result, "%s/.applications/dbspace/.app_info.db", userinfo->pw_dir);
+		asprintf(&journal, "%s/.applications/dbspace/.app_info.db-journal", userinfo->pw_dir);
+	} else {
+		grpinfo = getgrnam("root");
+		if (grpinfo == NULL) {
+			_E("getgrnam(root) returns NULL !");
+			return NULL;
+			}
+			if (grpinfo->gr_gid != userinfo->pw_gid) {
+				_E("UID [%d] does not belong to 'root' group!", uid);
+				return NULL;
+			}
+			result = strdup(APP_INFO_DB_FILE);
+			journal = strdup(APP_INFO_DB_FILE_JOURNAL);
+			/* chsmack */
+			if (smack_setlabel(result, SMACK_LABEL, SMACK_LABEL_ACCESS)) {
+				_E("failed chsmack -a \"%s\" %s", SMACK_LABEL, result);
+		} else {
+			_D("chsmack -a \"%s\" %s", SMACK_LABEL, result);
+		}
+		if (smack_setlabel(journal, SMACK_LABEL, SMACK_LABEL_ACCESS)) {
+			_E("failed chsmack -a \"%s\" %s", SMACK_LABEL, journal);
+		} else {
+			_D("chsmack -a \"%s\" %s", SMACK_LABEL, journal);
+		}
+	}
+	dir = strrchr(result, '/');
+	if(!dir)
+		return result;
+
+	int ret;
+	mkdir(dir + 1, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+	ret = chown(dir + 1, uid, grpinfo->gr_gid);
+	if (ret == -1) {
+		char buf[BUFSIZE];
+		strerror_r(errno, buf, sizeof(buf));
+		_E("FAIL : chown %s %d.%d, because %s", dir + 1, uid, grpinfo->gr_gid, buf);
+	}
+
+	return result;
+}
+
+char* al_get_desktop_path(uid_t uid)
+{
+	char *result = NULL;
+	struct group *grpinfo = NULL;
+	char *dir = NULL;
+	struct passwd *userinfo = getpwuid(uid);
+
+	if (uid != GLOBAL_USER) {
+
+		if (userinfo == NULL) {
+			_E("getpwuid(%d) returns NULL !", uid);
+			return NULL;
+		}
+		grpinfo = getgrnam("users");
+		if (grpinfo == NULL) {
+			_E("getgrnam(users) returns NULL !");
+			return NULL;
+		}
+		// Compare git_t type and not group name
+		if (grpinfo->gr_gid != userinfo->pw_gid) {
+			_E("UID [%d] does not belong to 'users' group!", uid);
+			return NULL;
+		}
+		asprintf(&result, "%s/.applications/desktop/", userinfo->pw_dir);
+	} else {
+		grpinfo = getgrnam("root");
+		if (grpinfo == NULL) {
+			_E("getgrnam(root) returns NULL !");
+			return NULL;
+		}
+		if (grpinfo->gr_gid != userinfo->pw_gid) {
+			_E("UID [%d] does not belong to 'root' group!", uid);
+			return NULL;
+		}
+		result = tzplatform_mkpath(TZ_SYS_RW_DESKTOP_APP, "/");
+		/* chsmack */
+		if (smack_setlabel(result, SMACK_LABEL, SMACK_LABEL_ACCESS)) {
+			_E("failed chsmack -a \"%s\" %s", SMACK_LABEL, result);
+		} else {
+			_D("chsmack -a \"%s\" %s", SMACK_LABEL, result);
+		}
+	}
+
+	int ret;
+	mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+	ret = chown(result, uid, grpinfo->gr_gid);
+	if (ret == -1) {
+		char buf[BUFSIZE];
+		strerror_r(errno, buf, sizeof(buf));
+		_E("FAIL : chown %s %d.%d, because %s", result, uid, grpinfo->gr_gid, buf);
+	}
+	return result;
+}
+
 
 static ail_error_e db_do_prepare(sqlite3 *db, const char *query, sqlite3_stmt **stmt)
 {
@@ -272,51 +355,52 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 				ret = do_db_exec(tbls[i], dbInit);
 				retv_if(ret != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
 			}
+			if(AIL_ERROR_OK != ail_db_change_perm(ail_get_app_DB(uid))) {
+				_E("Failed to change permission\n");
+		}
 		} else {
 			dbInit = NULL;
-			_E("Failed to create table %s\n",ail_get_app_DB(uid));
+			_E("Failed to create table %s\n", ail_get_app_DB(uid));
 		}
 	}
 	if(dbInit) {
-		if(AIL_ERROR_OK != ail_db_change_perm(ail_get_app_DB(uid))) {
-				_E("Failed to change permission\n");
-		}
 		ret = sqlite3_close(dbInit);
 		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 		dbInit = NULL;
 	}
 	if(mode & DB_OPEN_RO) {
-		if (!db_info.dbUserro) {
-			db_util_open_with_options(ail_get_app_DB(uid), &db_info.dbUserro, SQLITE_OPEN_READONLY, NULL);
-			char query_attach[AIL_SQL_QUERY_MAX_LEN];
-			char query_view_app[AIL_SQL_QUERY_MAX_LEN];
-			char query_view_local[AIL_SQL_QUERY_MAX_LEN];
-			snprintf(query_attach, AIL_SQL_QUERY_MAX_LEN, QUERY_ATTACH, ail_get_app_DB(GLOBAL_USER));
-			_E("info : execute query_attach : %s", query_attach );
-			if (db_exec_usr_ro(query_attach) < 0) {
-				return AIL_ERROR_DB_FAILED;
-			}
-			snprintf(query_view_app, AIL_SQL_QUERY_MAX_LEN, QUERY_CREATE_VIEW_APP);
-			_E("info : execute query_attach : %s", query_view_app );
-			if (db_exec_usr_ro(query_view_app) < 0) {
-				return AIL_ERROR_DB_FAILED;
-			}
+		if(uid != GLOBAL_USER) {
+			if (!db_info.dbUserro) {
+				db_util_open_with_options(ail_get_app_DB(uid), &db_info.dbUserro, SQLITE_OPEN_READONLY, NULL);
+				char query_attach[AIL_SQL_QUERY_MAX_LEN];
+				char query_view_app[AIL_SQL_QUERY_MAX_LEN];
+				char query_view_local[AIL_SQL_QUERY_MAX_LEN];
+				snprintf(query_attach, AIL_SQL_QUERY_MAX_LEN, QUERY_ATTACH, ail_get_app_DB(GLOBAL_USER));
+				_E("info : execute query_attach : %s", query_attach );
+				if (db_exec_usr_ro(query_attach) < 0) {
+					return AIL_ERROR_DB_FAILED;
+				}
+				snprintf(query_view_app, AIL_SQL_QUERY_MAX_LEN, QUERY_CREATE_VIEW_APP);
+				_E("info : execute query_attach : %s", query_view_app );
+				if (db_exec_usr_ro(query_view_app) < 0) {
+					return AIL_ERROR_DB_FAILED;
+				}
 
-			snprintf(query_view_local, AIL_SQL_QUERY_MAX_LEN, QUERY_CREATE_VIEW_LOCAL);
-			_E("info : execute query_attach : %s", query_view_local );
-			if (db_exec_usr_ro(query_view_local) < 0) {
-				return AIL_ERROR_DB_FAILED;
+				snprintf(query_view_local, AIL_SQL_QUERY_MAX_LEN, QUERY_CREATE_VIEW_LOCAL);
+				_E("info : execute query_attach : %s", query_view_local );
+				if (db_exec_usr_ro(query_view_local) < 0) {
+					return AIL_ERROR_DB_FAILED;
+				}
 			}
-		}
-		if (!db_info.dbGlobalro) {
+		} else {
+			if (!db_info.dbGlobalro) {
 				ret = db_util_open_with_options(ail_get_app_DB(GLOBAL_USER), &db_info.dbGlobalro, SQLITE_OPEN_READONLY, NULL);
 				retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 			}
-	}
-
+		}
+ }
 	if(mode & DB_OPEN_RW) {
-		//if (__is_admin) {
-		if(uid != GLOBAL_USER) {//TOCHANGETO is_admin
+		if(uid != GLOBAL_USER) {
 			if(!db_info.dbUserrw){
 				ret = db_util_open(ail_get_app_DB(uid), &db_info.dbUserrw, 0);
 			}
@@ -326,8 +410,6 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 			}
 		}
 		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
-	
-		//}
 	}
 
 	return AIL_ERROR_OK;
@@ -560,9 +642,9 @@ EXPORT_API ail_error_e ail_db_close(void)
 int db_exec_sqlite_query(char *query, sqlite_query_callback callback, void *data)
 {
 	char *error_message = NULL;
-	if(db_info.dbUserro) {
+	if(db_info.dbGlobalro) {
 		if (SQLITE_OK !=
-			sqlite3_exec(db_info.dbUserro, query, callback, data, &error_message)) {
+			sqlite3_exec(db_info.dbGlobalro, query, callback, data, &error_message)) {
 			_E("Don't execute query = %s error message = %s\n", query,
 				error_message);
 			sqlite3_free(error_message);

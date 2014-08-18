@@ -59,8 +59,10 @@ static int initdb_count_app(uid_t uid)
 		return -1;
 	}
 //__isadmin
-	ret = ail_filter_count_usr_appinfo(filter,  &total, uid);
-	//ret = ail_filter_count_appinfo(filter,  &total);
+        if (uid != GLOBAL_USER)
+	  ret = ail_filter_count_usr_appinfo(filter,  &total, uid);
+	else
+          ret = ail_filter_count_appinfo(filter,  &total);
 	if (ret != AIL_ERROR_OK) {
 		ail_filter_destroy(filter);
 		return -1;
