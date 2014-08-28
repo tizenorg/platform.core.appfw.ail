@@ -205,30 +205,33 @@ static char* ail_get_app_DB(uid_t uid)
 			result = strdup(APP_INFO_DB_FILE);
 			journal = strdup(APP_INFO_DB_FILE_JOURNAL);
 			/* chsmack */
-			if (smack_setlabel(result, SMACK_LABEL, SMACK_LABEL_ACCESS)) {
-				_E("failed chsmack -a \"%s\" %s", SMACK_LABEL, result);
-		} else {
-			_D("chsmack -a \"%s\" %s", SMACK_LABEL, result);
-		}
-		if (smack_setlabel(journal, SMACK_LABEL, SMACK_LABEL_ACCESS)) {
-			_E("failed chsmack -a \"%s\" %s", SMACK_LABEL, journal);
-		} else {
-			_D("chsmack -a \"%s\" %s", SMACK_LABEL, journal);
-		}
+			/*Check if we have permission to do it*/
+			if (geteuid() == 0) {
+				if (smack_setlabel(result, SMACK_LABEL, SMACK_LABEL_ACCESS)) {
+					_E("failed chsmack -a \"%s\" %s", SMACK_LABEL, result);
+				} else {
+					_D("chsmack -a \"%s\" %s", SMACK_LABEL, result);
+				}
+				if (smack_setlabel(journal, SMACK_LABEL, SMACK_LABEL_ACCESS)) {
+					_E("failed chsmack -a \"%s\" %s", SMACK_LABEL, journal);
+				} else {
+					_D("chsmack -a \"%s\" %s", SMACK_LABEL, journal);
+				}
+			}
 	}
 	dir = strrchr(result, '/');
 	if(!dir)
 		return result;
-
-	int ret;
-	mkdir(dir + 1, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-	ret = chown(dir + 1, uid, grpinfo->gr_gid);
-	if (ret == -1) {
-		char buf[BUFSIZE];
-		strerror_r(errno, buf, sizeof(buf));
-		_E("FAIL : chown %s %d.%d, because %s", dir + 1, uid, grpinfo->gr_gid, buf);
+	if ((uid != GLOBAL_USER)||((uid == GLOBAL_USER)&& (geteuid() == 0 ))) {
+		int ret;
+		mkdir(dir + 1, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+		ret = chown(dir + 1, uid, grpinfo->gr_gid);
+		if (ret == -1) {
+			char buf[BUFSIZE];
+			strerror_r(errno, buf, sizeof(buf));
+			_E("FAIL : chown %s %d.%d, because %s", dir + 1, uid, grpinfo->gr_gid, buf);
+		}
 	}
-
 	return result;
 }
 
@@ -274,14 +277,15 @@ char* al_get_desktop_path(uid_t uid)
 			_D("chsmack -a \"%s\" %s", SMACK_LABEL, result);
 		}
 	}
-
-	int ret;
-	mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-	ret = chown(result, uid, grpinfo->gr_gid);
-	if (ret == -1) {
-		char buf[BUFSIZE];
-		strerror_r(errno, buf, sizeof(buf));
-		_E("FAIL : chown %s %d.%d, because %s", result, uid, grpinfo->gr_gid, buf);
+	if ((uid != GLOBAL_USER)||((uid == GLOBAL_USER)&& (geteuid() == 0 ))) {
+		int ret;
+		mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+		ret = chown(result, uid, grpinfo->gr_gid);
+		if (ret == -1) {
+			char buf[BUFSIZE];
+			strerror_r(errno, buf, sizeof(buf));
+			_E("FAIL : chown %s %d.%d, because %s", result, uid, grpinfo->gr_gid, buf);
+		}
 	}
 	return result;
 }
@@ -376,18 +380,18 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 				char query_view_app[AIL_SQL_QUERY_MAX_LEN];
 				char query_view_local[AIL_SQL_QUERY_MAX_LEN];
 				snprintf(query_attach, AIL_SQL_QUERY_MAX_LEN, QUERY_ATTACH, ail_get_app_DB(GLOBAL_USER));
-				_E("info : execute query_attach : %s", query_attach );
+				_D("info : execute query_attach : %s", query_attach );
 				if (db_exec_usr_ro(query_attach) < 0) {
 					return AIL_ERROR_DB_FAILED;
 				}
 				snprintf(query_view_app, AIL_SQL_QUERY_MAX_LEN, QUERY_CREATE_VIEW_APP);
-				_E("info : execute query_attach : %s", query_view_app );
+				_D("info : execute query_attach : %s", query_view_app );
 				if (db_exec_usr_ro(query_view_app) < 0) {
 					return AIL_ERROR_DB_FAILED;
 				}
 
 				snprintf(query_view_local, AIL_SQL_QUERY_MAX_LEN, QUERY_CREATE_VIEW_LOCAL);
-				_E("info : execute query_attach : %s", query_view_local );
+				_D("info : execute query_attach : %s", query_view_local );
 				if (db_exec_usr_ro(query_view_local) < 0) {
 					return AIL_ERROR_DB_FAILED;
 				}

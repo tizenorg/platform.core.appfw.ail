@@ -252,6 +252,7 @@ _get_icon_with_path(char* icon, uid_t uid)
 		char* theme = NULL;
 		char* icon_with_path = NULL;
 		int len;
+		char *app_path = NULL;
 
 		package = _get_package_from_icon(icon);
 		retv_if(!package, NULL);
@@ -284,17 +285,17 @@ _get_icon_with_path(char* icon, uid_t uid)
 			sqlite3_snprintf( len, icon_with_path, "%s%q", ail_get_icon_path(uid), icon);
 		else
 			sqlite3_snprintf( len, icon_with_path, "%s/%q/small/%q", ail_get_icon_path(GLOBAL_USER), theme, icon);
-		if (!access (icon_with_path, F_OK))
-			sqlite3_snprintf( len, icon_with_path, "%s/%q/res/icons/%q/small/%q", tzplatform_getenv(TZ_SYS_RO_APP), package, theme, icon);
-		else if (!access (icon_with_path, F_OK))
-			sqlite3_snprintf( len, icon_with_path, "%s/%q/res/icons/%q/small/%q", tzplatform_getenv(TZ_SYS_RW_APP), package, theme, icon);
-		else
-			_D("Cannot find icon path");
+			
+		if (access (icon_with_path, F_OK)) {
+			app_path = tzplatform_getenv(TZ_SYS_RW_APP);
+			if (app_path)
+				sqlite3_snprintf( len, icon_with_path, "%s/%q/res/icons/%q/small/%q",app_path, package, theme, icon);
+			if (access (icon_with_path, F_OK))
+				_E("Cannot find icon path");
+		}
 		free(theme);
 		free(package);
 		_D("Icon path : %s", icon_with_path);
-
-
 		return icon_with_path;
 	} else {
 		char* confirmed_icon = NULL;
