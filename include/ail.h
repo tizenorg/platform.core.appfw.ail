@@ -33,7 +33,7 @@
 
 #define OWNER_ROOT 0
 #define GROUP_MENU 6010
-#define GLOBAL_USER 0 //tzplatform
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 #define BUFSZE 1024
 #define OPT_DESKTOP_DIRECTORY tzplatform_getenv(TZ_SYS_RW_DESKTOP_APP)
 #define USR_DESKTOP_DIRECTORY tzplatform_getenv(TZ_SYS_RO_DESKTOP_APP)
