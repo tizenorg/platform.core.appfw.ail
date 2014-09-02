@@ -31,10 +31,11 @@
 #include <pwd.h>
 #include <sys/smack.h>
 #include <sys/stat.h>
+#include <tzplatform_config.h>
 #include "ail_private.h"
 #include "ail_db.h"
 
-#define GLOBAL_USER	0 //#define 	tzplatform_getenv(TZ_GLOBAL) //TODO
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 #define BUFSIZE 4096
 #define QUERY_ATTACH "attach database '%s' as Global"
 #define QUERY_CREATE_VIEW_APP "CREATE temp VIEW app_info as select distinct * from (select  * from main.app_info m union select * from Global.app_info g)"
@@ -137,23 +138,16 @@ char* ail_get_icon_path(uid_t uid)
 		asprintf(&result, "%s/.applications/icons/", userinfo->pw_dir);
 	} else {
 		result = tzplatform_mkpath(TZ_SYS_RW_ICONS, "/");
-		grpinfo = getgrnam("root");
-		if (grpinfo == NULL) {
-			_E("getgrnam(root) returns NULL !");
-			return NULL;
-			}
-			if (grpinfo->gr_gid != userinfo->pw_gid) {
-				_E("UID [%d] does not belong to 'root' group!", uid);
-				return NULL;
-			}
 	}
 	int ret;
 	mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-	ret = chown(result, uid, grpinfo->gr_gid);
-	if (ret == -1) {
-		char buf[BUFSIZE];
-		strerror_r(errno, buf, sizeof(buf));
-		_E("FAIL : chown %s %d.%d, because %s", result, uid, grpinfo->gr_gid, buf);
+	if (getuid() == OWNER_ROOT) {
+		ret = chown(result, uid, grpinfo->gr_gid);
+		if (ret == -1) {
+			char buf[BUFSIZE];
+			strerror_r(errno, buf, sizeof(buf));
+			_E("FAIL : chown %s %d.%d, because %s", result, uid, grpinfo->gr_gid, buf);
+		}
 	}
 	return result;
 }
@@ -185,15 +179,6 @@ static char* ail_get_app_DB(uid_t uid)
 		asprintf(&result, "%s/.applications/dbspace/.app_info.db", userinfo->pw_dir);
 		asprintf(&journal, "%s/.applications/dbspace/.app_info.db-journal", userinfo->pw_dir);
 	} else {
-		grpinfo = getgrnam("root");
-		if (grpinfo == NULL) {
-			_E("getgrnam(root) returns NULL !");
-			return NULL;
-			}
-			if (grpinfo->gr_gid != userinfo->pw_gid) {
-				_E("UID [%d] does not belong to 'root' group!", uid);
-				return NULL;
-			}
 			result = strdup(APP_INFO_DB_FILE);
 			journal = strdup(APP_INFO_DB_FILE_JOURNAL);
 	}
@@ -208,12 +193,14 @@ static char* ail_get_app_DB(uid_t uid)
 	if ((uid != GLOBAL_USER)||((uid == GLOBAL_USER)&& (geteuid() == 0 ))) {
 		int ret;
 		mkdir(temp, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-		ret = chown(dir + 1, uid, grpinfo->gr_gid);
-		if (ret == -1) {
-			char buf[BUFSIZE];
-			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", dir + 1, uid, grpinfo->gr_gid, buf);
-		}
+		if (getuid() == OWNER_ROOT) {
+			ret = chown(dir + 1, uid, grpinfo->gr_gid);
+			if (ret == -1) {
+				char buf[BUFSIZE];
+				strerror_r(errno, buf, sizeof(buf));
+				_E("FAIL : chown %s %d.%d, because %s", dir + 1, uid, grpinfo->gr_gid, buf);
+			}
+	}
 	}
 	free(temp);
 	return result;
@@ -244,15 +231,6 @@ char* al_get_desktop_path(uid_t uid)
 		}
 		asprintf(&result, "%s/.applications/desktop/", userinfo->pw_dir);
 	} else {
-		grpinfo = getgrnam("root");
-		if (grpinfo == NULL) {
-			_E("getgrnam(root) returns NULL !");
-			return NULL;
-		}
-		if (grpinfo->gr_gid != userinfo->pw_gid) {
-			_E("UID [%d] does not belong to 'root' group!", uid);
-			return NULL;
-		}
 		result = tzplatform_mkpath(TZ_SYS_RW_DESKTOP_APP, "/");
 	}
 	if ((uid != GLOBAL_USER)||((uid == GLOBAL_USER)&& (geteuid() == 0 ))) {

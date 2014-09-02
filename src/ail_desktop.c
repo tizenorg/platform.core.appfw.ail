@@ -30,6 +30,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <tzplatform_config.h>
 #include <xdgmime.h>
 
 #include <vconf.h>
@@ -43,7 +44,7 @@
 #include "ail.h"
 
 #define BUFSIZE 4096
-#define GLOBAL_USER 0
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 
 #define whitespace(c) (((c) == ' ') || ((c) == '\t'))
 #define argsdelimiter	" \t"
@@ -1635,7 +1636,7 @@ static void _fini_desktop_info(desktop_info_s *info)
 static int __is_authorized()
 {
 	uid_t uid = getuid();
-	if ((uid_t) 0 == uid )
+	if ((uid_t) GLOBAL_USER == uid )
 		return 1;
 	else
 		return 0;
