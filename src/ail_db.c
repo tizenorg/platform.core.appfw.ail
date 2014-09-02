@@ -31,10 +31,11 @@
 #include <pwd.h>
 #include <sys/smack.h>
 #include <sys/stat.h>
+#include <tzplatform_config.h>
 #include "ail_private.h"
 #include "ail_db.h"
 
-#define GLOBAL_USER	0 //#define 	tzplatform_getenv(TZ_GLOBAL) //TODO
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 #define BUFSIZE 4096
 #define QUERY_ATTACH "attach database '%s' as Global"
 #define QUERY_CREATE_VIEW_APP "CREATE temp VIEW app_info as select distinct * from (select  * from main.app_info m union select * from Global.app_info g)"

@@ -30,6 +30,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <tzplatform_config.h>
 #include <xdgmime.h>
 
 #include <vconf.h>
@@ -43,7 +44,7 @@
 #include "ail.h"
 
 #define BUFSIZE 4096
-#define GLOBAL_USER 0
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 
 #define whitespace(c) (((c) == ' ') || ((c) == '\t'))
 #define argsdelimiter	" \t"
