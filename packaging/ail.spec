@@ -106,6 +106,7 @@ fi
 %{_bindir}/ail_fota
 %{_bindir}/ail_desktop
 %{_bindir}/ail_filter
+%{_bindir}/ail_list
 %{_bindir}/ail_package
 %{_datadir}/install-info/*
 %{_libdir}/libail.so.0
