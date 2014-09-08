@@ -1636,7 +1636,7 @@ static void _fini_desktop_info(desktop_info_s *info)
 static int __is_authorized()
 {
 	uid_t uid = getuid();
-	if ((uid_t) 0 == uid )
+	if ((uid_t) GLOBAL_USER == uid )
 		return 1;
 	else
 		return 0;
