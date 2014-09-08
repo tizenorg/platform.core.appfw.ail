@@ -150,11 +150,13 @@ char* ail_get_icon_path(uid_t uid)
 	}
 	int ret;
 	mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-	ret = chown(result, uid, grpinfo->gr_gid);
-	if (ret == -1) {
-		char buf[BUFSIZE];
-		strerror_r(errno, buf, sizeof(buf));
-		_E("FAIL : chown %s %d.%d, because %s", result, uid, grpinfo->gr_gid, buf);
+	if (getuid() == OWNER_ROOT) {
+		ret = chown(result, uid, grpinfo->gr_gid);
+		if (ret == -1) {
+			char buf[BUFSIZE];
+			strerror_r(errno, buf, sizeof(buf));
+			_E("FAIL : chown %s %d.%d, because %s", result, uid, grpinfo->gr_gid, buf);
+		}
 	}
 	return result;
 }
@@ -209,12 +211,14 @@ static char* ail_get_app_DB(uid_t uid)
 	if ((uid != GLOBAL_USER)||((uid == GLOBAL_USER)&& (geteuid() == 0 ))) {
 		int ret;
 		mkdir(temp, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-		ret = chown(dir + 1, uid, grpinfo->gr_gid);
-		if (ret == -1) {
-			char buf[BUFSIZE];
-			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", dir + 1, uid, grpinfo->gr_gid, buf);
-		}
+		if (getuid() == OWNER_ROOT) {
+			ret = chown(dir + 1, uid, grpinfo->gr_gid);
+			if (ret == -1) {
+				char buf[BUFSIZE];
+				strerror_r(errno, buf, sizeof(buf));
+				_E("FAIL : chown %s %d.%d, because %s", dir + 1, uid, grpinfo->gr_gid, buf);
+			}
+	}
 	}
 	free(temp);
 	return result;
