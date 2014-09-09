@@ -138,15 +138,6 @@ char* ail_get_icon_path(uid_t uid)
 		asprintf(&result, "%s/.applications/icons/", userinfo->pw_dir);
 	} else {
 		result = tzplatform_mkpath(TZ_SYS_RW_ICONS, "/");
-		grpinfo = getgrnam("root");
-		if (grpinfo == NULL) {
-			_E("getgrnam(root) returns NULL !");
-			return NULL;
-			}
-			if (grpinfo->gr_gid != userinfo->pw_gid) {
-				_E("UID [%d] does not belong to 'root' group!", uid);
-				return NULL;
-			}
 	}
 	int ret;
 	mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
@@ -188,15 +179,6 @@ static char* ail_get_app_DB(uid_t uid)
 		asprintf(&result, "%s/.applications/dbspace/.app_info.db", userinfo->pw_dir);
 		asprintf(&journal, "%s/.applications/dbspace/.app_info.db-journal", userinfo->pw_dir);
 	} else {
-		grpinfo = getgrnam("root");
-		if (grpinfo == NULL) {
-			_E("getgrnam(root) returns NULL !");
-			return NULL;
-			}
-			if (grpinfo->gr_gid != userinfo->pw_gid) {
-				_E("UID [%d] does not belong to 'root' group!", uid);
-				return NULL;
-			}
 			result = strdup(APP_INFO_DB_FILE);
 			journal = strdup(APP_INFO_DB_FILE_JOURNAL);
 	}
@@ -249,15 +231,6 @@ char* al_get_desktop_path(uid_t uid)
 		}
 		asprintf(&result, "%s/.applications/desktop/", userinfo->pw_dir);
 	} else {
-		grpinfo = getgrnam("root");
-		if (grpinfo == NULL) {
-			_E("getgrnam(root) returns NULL !");
-			return NULL;
-		}
-		if (grpinfo->gr_gid != userinfo->pw_gid) {
-			_E("UID [%d] does not belong to 'root' group!", uid);
-			return NULL;
-		}
 		result = tzplatform_mkpath(TZ_SYS_RW_DESKTOP_APP, "/");
 	}
 	if ((uid != GLOBAL_USER)||((uid == GLOBAL_USER)&& (geteuid() == 0 ))) {
