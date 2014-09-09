@@ -278,15 +278,12 @@ EXPORT_API ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *cnt)
 	}
 	else
 		_D("No filter exists. All records are retreived");
+
 //is_admin
-	if (db_prepare(q, &stmt) != AIL_ERROR_OK) {
-		_E("db_prepare fail for query = %s",q);
+	if (db_prepare_globalro(q, &stmt) != AIL_ERROR_OK) {
+		_E("db_prepare_globalro fail for query = %s",q);
 		return AIL_ERROR_DB_FAILED;
 	}
-/*	if (db_prepare(q, &stmt) != AIL_ERROR_OK) {
-		_E("db_prepare fail for query = %s",q);
-		return AIL_ERROR_DB_FAILED;
-	}*/
 	ai = appinfo_create();
 
 	appinfo_set_stmt(ai, stmt);
@@ -318,6 +315,10 @@ EXPORT_API ail_error_e ail_filter_count_usr_appinfo(ail_filter_h filter, int *cn
 	int filter_count = 0;
 
 	retv_if(!cnt, AIL_ERROR_INVALID_PARAMETER);
+
+//is_admin ; redirect
+	if (uid == GLOBAL_USER)
+		return ail_filter_count_appinfo(filter, cnt);
 
 	if (db_open(DB_OPEN_RO, uid) != AIL_ERROR_OK)
 		return AIL_ERROR_DB_FAILED;
