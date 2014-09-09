@@ -44,7 +44,7 @@ ail_cb_ret_e appinfo_list_appid_namefunc(const ail_appinfo_h appinfo,  void *use
 	ail_appinfo_get_str(appinfo, AIL_PROP_X_SLP_EXE_PATH, &package_str_x_slp_exe);
 		
 	printf("'%s' '%s' '%s'\n",package_str_appid, package_str_name, package_str_x_slp_exe);
-	return 0;
+	return AIL_CB_RET_CONTINUE;
 }
 
 
