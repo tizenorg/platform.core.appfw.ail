@@ -65,31 +65,12 @@ chsmack -a User %TZ_SYS_CONFIG/db/menuscreen/desktop
 chsmack -a User %TZ_SYS_CONFIG/db/menu_widget
 chsmack -a User %TZ_SYS_CONFIG/db/menu_widget/language
 
-CHDBGID="6010"
-
-update_DAC_for_db_file()
-{
-        if [ ! -f $@ ]; then
-                touch $@
-        fi
-
-        chown :$CHDBGID $@ 2>/dev/null
-        if [ $? -ne 0 ]; then
-                echo "Failed to change the owner of $@"
-        fi
-        chmod 664 $@ 2>/dev/null
-        if [ $? -ne 0 ]; then
-                echo "Failed to change the perms of $@"
-        fi
-}
-ail_initdb 2>/dev/null
 mkdir -p %{TZ_SYS_RO_DESKTOP_APP}
 mkdir -p %{TZ_SYS_RW_DESKTOP_APP}
 mkdir -p %{TZ_SYS_DB}
+su - tizenglobalapp -c ail_initdb 2>/dev/null
 
-update_DAC_for_db_file %{TZ_SYS_DB}/.app_info.db
-update_DAC_for_db_file %{TZ_SYS_DB}/.app_info.db-journal
-chsmack -a 'User' %{TZ_SYS_DB}/.app_info.db*
+chsmack -a '*' %{TZ_SYS_DB}/.app_info.db*
 
 %postun
 /sbin/ldconfig
@@ -101,8 +82,7 @@ fi
 %manifest %{name}.manifest
 %license LICENSE
 %dir %{TZ_SYS_RW_DESKTOP_APP}
-%{_bindir}/ail_initdb
-%{_bindir}/ail_initdb
+%attr(06755,root,root) %{_bindir}/ail_initdb
 %{_bindir}/ail_fota
 %{_bindir}/ail_desktop
 %{_bindir}/ail_filter
