@@ -193,7 +193,9 @@ static int __is_authorized()
 	/* ail_init db should be called by as root privilege. */
 
 	uid_t uid = getuid();
-	if ((uid_t) GLOBAL_USER == uid)
+	uid_t euid = geteuid();
+	//euid need to be root to allow smack label changes during initialization
+	if (((uid_t) GLOBAL_USER == uid) && (euid == OWNER_ROOT) )
 		return 1;
 	else
 		return 0;
@@ -252,11 +254,6 @@ int main(int argc, char *argv[])
 	ret = initdb_count_app(getuid());
 	if (ret > 0) {
 		_D("Some Apps in the App Info DB.");
-	}
-
-	ret = initdb_load_directory(OPT_DESKTOP_DIRECTORY);
-	if (ret == AIL_ERROR_FAIL) {
-		_E("cannot load opt desktop directory.");
 	}
 
 	ret = initdb_load_directory(USR_DESKTOP_DIRECTORY);
