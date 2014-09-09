@@ -66,7 +66,7 @@ typedef enum {
 
 struct entry_parser {
 	const char *field;
-	ail_error_e (*value_cb)(void *data, char *tag, char *value);
+	ail_error_e (*value_cb)(void *data, char *tag, char *value, uid_t uid);
 };
 
 inline static char *_ltrim(char *str)
@@ -131,7 +131,7 @@ typedef struct {
 
 
 
-static ail_error_e _read_exec(void *data, char *tag, char *value)
+static ail_error_e _read_exec(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 	char *token_exe_path;
@@ -167,7 +167,7 @@ static ail_error_e _read_exec(void *data, char *tag, char *value)
 
 
 
-static ail_error_e _read_name(void *data, char *tag, char *value)
+static ail_error_e _read_name(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -208,7 +208,7 @@ static ail_error_e _read_name(void *data, char *tag, char *value)
 
 
 
-static ail_error_e _read_type(void *data, char *tag, char *value)
+static ail_error_e _read_type(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -324,7 +324,7 @@ static ail_error_e _read_icon(void *data, char *tag, char *value, uid_t uid)
 
 
 
-static ail_error_e _read_categories(void *data, char *tag, char *value)
+static ail_error_e _read_categories(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -339,7 +339,7 @@ static ail_error_e _read_categories(void *data, char *tag, char *value)
 
 
 
-static ail_error_e _read_version(void *data, char *tag, char *value)
+static ail_error_e _read_version(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -354,7 +354,7 @@ static ail_error_e _read_version(void *data, char *tag, char *value)
 
 
 
-static ail_error_e _read_mimetype(void *data, char *tag, char *value)
+static ail_error_e _read_mimetype(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 	int size, total_len = 0;
@@ -416,7 +416,7 @@ static ail_error_e _read_mimetype(void *data, char *tag, char *value)
 
 
 
-static ail_error_e _read_nodisplay(void *data, char *tag, char *value)
+static ail_error_e _read_nodisplay(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s* info = data;
 
@@ -430,7 +430,7 @@ static ail_error_e _read_nodisplay(void *data, char *tag, char *value)
 
 
 
-static ail_error_e _read_x_slp_service(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_service(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -445,7 +445,7 @@ static ail_error_e _read_x_slp_service(void *data, char *tag, char *value)
 
 
 
-static ail_error_e _read_x_slp_packagetype(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_packagetype(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -460,7 +460,7 @@ static ail_error_e _read_x_slp_packagetype(void *data, char *tag, char *value)
 
 
 
-static ail_error_e _read_x_slp_packagecategories(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_packagecategories(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -475,7 +475,7 @@ static ail_error_e _read_x_slp_packagecategories(void *data, char *tag, char *va
 
 
 
-static ail_error_e _read_x_slp_packageid(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_packageid(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -488,7 +488,7 @@ static ail_error_e _read_x_slp_packageid(void *data, char *tag, char *value)
 	return AIL_ERROR_OK;
 }
 
-static ail_error_e _read_x_slp_submodemainid(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_submodemainid(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -501,7 +501,7 @@ static ail_error_e _read_x_slp_submodemainid(void *data, char *tag, char *value)
 	return AIL_ERROR_OK;
 }
 
-static ail_error_e _read_x_slp_installedstorage(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_installedstorage(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -514,7 +514,7 @@ static ail_error_e _read_x_slp_installedstorage(void *data, char *tag, char *val
 	return AIL_ERROR_OK;
 }
 
-static ail_error_e _read_x_slp_uri(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_uri(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -529,7 +529,7 @@ static ail_error_e _read_x_slp_uri(void *data, char *tag, char *value)
 
 
 
-static ail_error_e _read_x_slp_svc(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_svc(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -544,7 +544,7 @@ static ail_error_e _read_x_slp_svc(void *data, char *tag, char *value)
 
 
 
-static ail_error_e _read_x_slp_taskmanage(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_taskmanage(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -558,7 +558,7 @@ static ail_error_e _read_x_slp_taskmanage(void *data, char *tag, char *value)
 
 
 
-static ail_error_e _read_x_slp_multiple(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_multiple(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -572,7 +572,7 @@ static ail_error_e _read_x_slp_multiple(void *data, char *tag, char *value)
 
 
 
-static ail_error_e _read_x_slp_removable(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_removable(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -585,7 +585,7 @@ static ail_error_e _read_x_slp_removable(void *data, char *tag, char *value)
 }
 
 
-static ail_error_e _read_x_slp_submode(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_submode(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -597,7 +597,7 @@ static ail_error_e _read_x_slp_submode(void *data, char *tag, char *value)
 	return AIL_ERROR_OK;
 }
 
-static ail_error_e _read_x_slp_appid(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_appid(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -611,7 +611,7 @@ static ail_error_e _read_x_slp_appid(void *data, char *tag, char *value)
 }
 
 
-static ail_error_e _read_x_slp_pkgid(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_pkgid(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -625,7 +625,7 @@ static ail_error_e _read_x_slp_pkgid(void *data, char *tag, char *value)
 }
 
 
-static ail_error_e _read_x_slp_domain(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_domain(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -639,7 +639,7 @@ static ail_error_e _read_x_slp_domain(void *data, char *tag, char *value)
 }
 
 
-static ail_error_e _read_x_slp_enabled(void *data, char *tag, char *value)
+static ail_error_e _read_x_slp_enabled(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
 
@@ -984,7 +984,7 @@ static ail_error_e _init_desktop_info(desktop_info_s *info, const char *package,
 
 
 
-static ail_error_e _read_desktop_info(desktop_info_s* info)
+static ail_error_e _read_desktop_info(desktop_info_s* info,uid_t uid)
 {
 	char *line = NULL;
 	FILE *fp;
@@ -1027,7 +1027,7 @@ static ail_error_e _read_desktop_info(desktop_info_s* info)
 
 		for (idx = 0; entry_parsers[idx].field; idx ++) {
 			if (!g_ascii_strcasecmp(entry_parsers[idx].field, field_name) && entry_parsers[idx].value_cb) {
-				if (entry_parsers[idx].value_cb(info, tag, tmp) != AIL_ERROR_OK) {
+				if (entry_parsers[idx].value_cb(info, tag, tmp,uid) != AIL_ERROR_OK) {
 					_E("field - [%s] is wrong.", field_name);
 				}
 				break;
@@ -1654,7 +1654,7 @@ EXPORT_API ail_error_e ail_usr_desktop_add(const char *appid, uid_t uid)
 	ret = _init_desktop_info(&info, appid, uid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
-	ret = _read_desktop_info(&info);
+	ret = _read_desktop_info(&info,uid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
 	ret = _insert_desktop_info(&info, uid);
@@ -1683,7 +1683,7 @@ EXPORT_API ail_error_e ail_usr_desktop_update(const char *appid, uid_t uid)
 	ret = _init_desktop_info(&info, appid, uid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
-	ret = _read_desktop_info(&info);
+	ret = _read_desktop_info(&info,uid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
 	ret = _update_desktop_info(&info, uid);
@@ -1753,7 +1753,7 @@ EXPORT_API ail_error_e ail_usr_desktop_fota(const char *appid, uid_t uid)
 	ret = _init_desktop_info(&info, appid, uid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
-	ret = _read_desktop_info(&info);
+	ret = _read_desktop_info(&info,uid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
 	ret = _insert_desktop_info(&info, uid);

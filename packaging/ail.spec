@@ -16,6 +16,7 @@ BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(xdgmime)
 BuildRequires:  pkgconfig(libtzplatform-config)
 Provides:       libail = %{version}-%{release}
+Requires:  		libcap-tools
 
 %description
 Application Information Library package
@@ -24,6 +25,7 @@ Application Information Library package
 Summary:        Application Information Library Development files
 Requires:       libail = %{version}-%{release}
 Requires:       pkgconfig(libtzplatform-config)
+Requires:  		pkgconfig(libsmack)
 
 %description devel
 Application Information Library Development files package
@@ -50,9 +52,6 @@ export FFLAGS="$FFLAGS -DTIZEN_ENGINEER_MODE"
 %install
 %make_install
 
-mkdir -p %{buildroot}%{TZ_SYS_DB}/
-mkdir -p %{buildroot}%{TZ_SYS_RW_DESKTOP_APP}/
-
 %post
 /sbin/ldconfig
 vconftool set -t string db/ail/ail_info "0" -f -s system::vconf_inhouse
@@ -65,32 +64,22 @@ chsmack -a User %TZ_SYS_CONFIG/db/menuscreen/desktop
 chsmack -a User %TZ_SYS_CONFIG/db/menu_widget
 chsmack -a User %TZ_SYS_CONFIG/db/menu_widget/language
 
-CHDBGID="6010"
-
-update_DAC_for_db_file()
-{
-        if [ ! -f $@ ]; then
-                touch $@
-        fi
-
-        chown :$CHDBGID $@ 2>/dev/null
-        if [ $? -ne 0 ]; then
-                echo "Failed to change the owner of $@"
-        fi
-        chmod 664 $@ 2>/dev/null
-        if [ $? -ne 0 ]; then
-                echo "Failed to change the perms of $@"
-        fi
-}
-ail_initdb 2>/dev/null
 mkdir -p %{TZ_SYS_RO_DESKTOP_APP}
 mkdir -p %{TZ_SYS_RW_DESKTOP_APP}
+mkdir -p %{TZ_SYS_RW_APP}
 mkdir -p %{TZ_SYS_DB}
 
-update_DAC_for_db_file %{TZ_SYS_DB}/.app_info.db
-update_DAC_for_db_file %{TZ_SYS_DB}/.app_info.db-journal
-chsmack -a 'User' %{TZ_SYS_DB}/.app_info.db*
+chsmack -a '*' %{TZ_SYS_DB}
+chsmack -a '*' %{TZ_SYS_RW_APP}
+chsmack -a '*' %{TZ_SYS_RW_DESKTOP_APP}
+chsmack -a '*' %{TZ_SYS_RO_DESKTOP_APP}
 
+chmod g+w %{TZ_SYS_RW_DESKTOP_APP}
+chmod g+w %{TZ_SYS_RO_DESKTOP_APP}
+
+ail_initdb 2>/dev/null
+chsmack -a '*' %{TZ_SYS_DB}/.app_info.db*
+ 
 %postun
 /sbin/ldconfig
 if [ $1 == 0 ]; then
@@ -100,9 +89,7 @@ fi
 %files
 %manifest %{name}.manifest
 %license LICENSE
-%dir %{TZ_SYS_RW_DESKTOP_APP}
-%{_bindir}/ail_initdb
-%{_bindir}/ail_initdb
+%attr(06775,root,root) %{_bindir}/ail_initdb
 %{_bindir}/ail_fota
 %{_bindir}/ail_desktop
 %{_bindir}/ail_filter

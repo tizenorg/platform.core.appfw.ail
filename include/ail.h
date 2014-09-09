@@ -35,11 +35,10 @@
 #define GROUP_MENU 6010
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 #define BUFSZE 1024
-#define OPT_DESKTOP_DIRECTORY tzplatform_getenv(TZ_SYS_RW_DESKTOP_APP)
 #define USR_DESKTOP_DIRECTORY tzplatform_getenv(TZ_SYS_RO_DESKTOP_APP)
 #define APP_INFO_DB_FILE tzplatform_mkpath(TZ_SYS_DB,".app_info.db")
 #define APP_INFO_DB_FILE_JOURNAL tzplatform_mkpath(TZ_SYS_DB,".app_info.db-journal")
-#define APP_INFO_DB_LABEL "_"
+#define APP_INFO_DB_LABEL "*"
 
 #ifdef __cplusplus
 extern "C" {
@@ -440,7 +439,7 @@ typedef enum {
  *
  * @see  ail_filter_list_appinfo_foreach()
  */
-typedef ail_cb_ret_e (*ail_list_appinfo_cb) (const ail_appinfo_h appinfo_h, void *user_data);
+typedef ail_cb_ret_e (*ail_list_appinfo_cb) (const ail_appinfo_h appinfo_h, void *user_data,uid_t uid);
 
 /**
  * @fn ail_error_e ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_list_appinfo_cb func, void *user_data)

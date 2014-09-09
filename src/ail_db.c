@@ -42,6 +42,11 @@
 
 #define QUERY_CREATE_VIEW_LOCAL "CREATE temp VIEW localname as select distinct * from (select  * from main.localname m union select * from Global.localname g)"
 
+#define SET_SMACK_LABEL(x,uid) \
+	if(smack_setlabel((x), (((uid) == GLOBAL_USER)?"*":"User"), SMACK_LABEL_ACCESS)) _E("failed chsmack -a \"User/*\" %s", x); \
+	else _D("chsmack -a \"User/*\" %s", x);
+	
+	
 #define retv_with_dbmsg_if(expr, val) do { \
 	if (expr) { \
 		_E("db_info.dbUserro: %s", sqlite3_errmsg(db_info.dbUserro)); \
@@ -69,35 +74,34 @@ static __thread struct {
 };
   static __thread      sqlite3         *dbInit = NULL;
 
-static int ail_db_change_perm(const char *db_file)
+static int ail_db_change_perm(const char *db_file, uid_t uid)
 {
 	char buf[BUFSIZE];
 	char journal_file[BUFSIZE];
 	char *files[3];
 	int ret, i;
-	struct group *grpinfo = NULL;
-	const char *name = "users";
-
+	struct passwd *userinfo = NULL;
 	files[0] = (char *)db_file;
 	files[1] = journal_file;
 	files[2] = NULL;
 
 	retv_if(!db_file, AIL_ERROR_FAIL);
-	if(getuid()) //At this time we should be root to apply this
+	if(getuid() != OWNER_ROOT) //At this time we should be root to apply this
 			return AIL_ERROR_OK;
-
+    userinfo = getpwuid(uid);
+    if (!userinfo) {
+		_E("FAIL: user %d doesn't exist", uid);
+		return AIL_ERROR_FAIL;
+	}
 	snprintf(journal_file, sizeof(journal_file), "%s%s", db_file, "-journal");
 
 	for (i = 0; files[i]; i++) {
-		grpinfo = getgrnam(name);
-		if(grpinfo == NULL)
-			_E("getgrnam(users) returns NULL !");
-
 		// Compare git_t type and not group name
-		ret = chown(files[i], OWNER_ROOT, grpinfo->gr_gid);
+		ret = chown(files[i], uid, userinfo->pw_gid);
+		SET_SMACK_LABEL(files[i],uid)
 		if (ret == -1) {
 			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", db_file, OWNER_ROOT, grpinfo->gr_gid, buf);
+			_E("FAIL : chown %s %d.%d, because %s", db_file, uid, userinfo->pw_gid, buf);
 			return AIL_ERROR_FAIL;
 		}
 
@@ -119,8 +123,11 @@ char* ail_get_icon_path(uid_t uid)
 	char *dir = NULL;
 	struct passwd *userinfo = getpwuid(uid);
 
+	if (uid == 0) {
+		_E("FAIL : Root is not allowed user! please fix it replacing with DEFAULT_USER");
+		return NULL;
+	}
 	if (uid != GLOBAL_USER) {
-
 		if (userinfo == NULL) {
 			_E("getpwuid(%d) returns NULL !", uid);
 			return NULL;
@@ -142,11 +149,12 @@ char* ail_get_icon_path(uid_t uid)
 	int ret;
 	mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
 	if (getuid() == OWNER_ROOT) {
-		ret = chown(result, uid, grpinfo->gr_gid);
+		ret = chown(result, uid, ((grpinfo)?grpinfo->gr_gid:0));
+		SET_SMACK_LABEL(result,uid)
 		if (ret == -1) {
 			char buf[BUFSIZE];
 			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", result, uid, grpinfo->gr_gid, buf);
+			_E("FAIL : chown %s %d.%d, because %s", result, uid, ((grpinfo)?grpinfo->gr_gid:0), buf);
 		}
 	}
 	return result;
@@ -160,8 +168,11 @@ static char* ail_get_app_DB(uid_t uid)
 	char *dir = NULL;
 	struct passwd *userinfo = getpwuid(uid);
 
+	if (uid == 0) {
+		_E("FAIL : Root is not allowed! switch to DEFAULT_USER");
+		return NULL;
+	}
 	if (uid != GLOBAL_USER) {
-
 		if (userinfo == NULL) {
 			_E("getpwuid(%d) returns NULL !", uid);
 			return NULL;
@@ -194,11 +205,12 @@ static char* ail_get_app_DB(uid_t uid)
 		int ret;
 		mkdir(temp, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
 		if (getuid() == OWNER_ROOT) {
-			ret = chown(dir + 1, uid, grpinfo->gr_gid);
+			ret = chown(temp, uid, ((grpinfo)?grpinfo->gr_gid:0));
+			SET_SMACK_LABEL(temp,uid)
 			if (ret == -1) {
 				char buf[BUFSIZE];
 				strerror_r(errno, buf, sizeof(buf));
-				_E("FAIL : chown %s %d.%d, because %s", dir + 1, uid, grpinfo->gr_gid, buf);
+				_E("FAIL : chown %s %d.%d, because %s", temp, uid, ((grpinfo)?grpinfo->gr_gid:0), buf);
 			}
 	}
 	}
@@ -213,8 +225,11 @@ char* al_get_desktop_path(uid_t uid)
 	char *dir = NULL;
 	struct passwd *userinfo = getpwuid(uid);
 
+	if (uid == 0) {
+		_E("FAIL : Root is not allowed user! please fix it replacing with DEFAULT_USER");
+		return NULL;
+	}
 	if (uid != GLOBAL_USER) {
-
 		if (userinfo == NULL) {
 			_E("getpwuid(%d) returns NULL !", uid);
 			return NULL;
@@ -236,11 +251,12 @@ char* al_get_desktop_path(uid_t uid)
 	if ((uid != GLOBAL_USER)||((uid == GLOBAL_USER)&& (geteuid() == 0 ))) {
 		int ret;
 		mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-		ret = chown(result, uid, grpinfo->gr_gid);
+		ret = chown(result, uid, ((grpinfo)?grpinfo->gr_gid:0));
+		SET_SMACK_LABEL(result,uid)
 		if (ret == -1) {
 			char buf[BUFSIZE];
 			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", result, uid, grpinfo->gr_gid, buf);
+			_E("FAIL : chown %s %d.%d, because %s", result, uid, ((grpinfo)?grpinfo->gr_gid:0), buf);
 		}
 	}
 	return result;
@@ -315,7 +331,7 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 				ret = do_db_exec(tbls[i], dbInit);
 				retv_if(ret != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
 			}
-			if(AIL_ERROR_OK != ail_db_change_perm(ail_get_app_DB(uid))) {
+			if(AIL_ERROR_OK != ail_db_change_perm(ail_get_app_DB(uid), uid)) {
 				_E("Failed to change permission\n");
 		}
 		} else {

@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <sys/smack.h>
 
 #include "ail.h"
 #include "ail_private.h"
@@ -41,6 +42,10 @@
 #undef _D
 #endif
 #define _D(fmt, arg...) fprintf(stderr, "[AIL_INITDB][D][%s,%d] "fmt"\n", __FUNCTION__, __LINE__, ##arg);
+
+#define SET_DEFAULT_LABEL(x) \
+	if(smack_setlabel((x), "*", SMACK_LABEL_ACCESS)) _E("failed chsmack -a \"*\" %s", x) \
+	else _D("chsmack -a \"*\" %s", x)
 
 static int initdb_count_app(uid_t uid)
 {
@@ -193,7 +198,9 @@ static int __is_authorized()
 	/* ail_init db should be called by as root privilege. */
 
 	uid_t uid = getuid();
-	if ((uid_t) GLOBAL_USER == uid)
+	uid_t euid = geteuid();
+	//euid need to be root to allow smack label changes during initialization
+	if (((uid_t) GLOBAL_USER == uid) && (euid == OWNER_ROOT) )
 		return 1;
 	else
 		return 0;
@@ -239,24 +246,19 @@ int main(int argc, char *argv[])
 	if (!__is_authorized()) {
 		fprintf(stderr, "You are not an authorized user!\n");
 		_D("You are not root user!\n");
-    }
-    else {
-	const char *argv_rm[] = { "/bin/rm", APP_INFO_DB_FILE, NULL };
-	xsystem(argv_rm);
-	const char *argv_rmjn[] = { "/bin/rm", APP_INFO_DB_FILE_JOURNAL, NULL };
-	xsystem(argv_rmjn);
-    }
+	}
+	else {
+		if(remove(APP_INFO_DB_FILE))
+			_E(" %s is not removed",APP_INFO_DB_FILE);
+		if(remove(APP_INFO_DB_FILE_JOURNAL))
+			_E(" %s is not removed",APP_INFO_DB_FILE_JOURNAL);
+	}
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);
 
 	ret = initdb_count_app(getuid());
 	if (ret > 0) {
 		_D("Some Apps in the App Info DB.");
-	}
-
-	ret = initdb_load_directory(OPT_DESKTOP_DIRECTORY);
-	if (ret == AIL_ERROR_FAIL) {
-		_E("cannot load opt desktop directory.");
 	}
 
 	ret = initdb_load_directory(USR_DESKTOP_DIRECTORY);
@@ -269,10 +271,8 @@ int main(int argc, char *argv[])
 		if (ret == AIL_ERROR_FAIL) {
 			_E("cannot chown.");
 		}
-		const char *argv_smack[] = { "/usr/bin/chsmack", "-a", APP_INFO_DB_LABEL, APP_INFO_DB_FILE, NULL };
-		xsystem(argv_smack);
-		const char *argv_smackjn[] = { "/usr/bin/chsmack", "-a", APP_INFO_DB_LABEL, APP_INFO_DB_FILE_JOURNAL, NULL };
-		xsystem(argv_smackjn);
+		SET_DEFAULT_LABEL(APP_INFO_DB_FILE);
+		SET_DEFAULT_LABEL(APP_INFO_DB_FILE_JOURNAL);
 	}
 	return AIL_ERROR_OK;
 }
