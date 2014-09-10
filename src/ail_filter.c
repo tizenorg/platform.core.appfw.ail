@@ -431,7 +431,7 @@ EXPORT_API ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_
 		if(_appinfo_check_installed_storage(ai) != AIL_ERROR_OK)
 			continue;
 
-		r = cb(ai, user_data);
+		r = cb(ai, user_data,GLOBAL_USER);
 		if (AIL_CB_RET_CANCEL == r)
 			break;
 	}
@@ -494,7 +494,7 @@ EXPORT_API ail_error_e ail_filter_list_usr_appinfo_foreach(ail_filter_h filter, 
 		if(_appinfo_check_installed_storage(ai) != AIL_ERROR_OK)
 			continue;
 
-		r = cb(ai, user_data);
+		r = cb(ai, user_data,uid);
 		if (AIL_CB_RET_CANCEL == r)
 			break;
 	}
