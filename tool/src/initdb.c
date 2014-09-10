@@ -166,7 +166,7 @@ static int initdb_change_perm(const char *db_file)
 	snprintf(journal_file, sizeof(journal_file), "%s%s", db_file, "-journal");
 
 	for (i = 0; files[i]; i++) {
-		ret = chown(files[i], OWNER_ROOT, OWNER_ROOT);
+		ret = chown(files[i], GLOBAL_USER, OWNER_ROOT);
 		if (ret == -1) {
 			strerror_r(errno, buf, sizeof(buf));
 			_E("FAIL : chown %s %d.%d, because %s", db_file, OWNER_ROOT, OWNER_ROOT, buf);
@@ -192,7 +192,7 @@ static int __is_authorized()
 	uid_t uid = getuid();
 	uid_t euid = geteuid();
 	//euid need to be root to allow smack label changes during initialization
-	if (((uid_t) GLOBAL_USER == uid) && (euid == OWNER_ROOT) )
+	if ((uid_t) OWNER_ROOT == uid)
 		return 1;
 	else
 		return 0;
@@ -245,7 +245,7 @@ int main(int argc, char *argv[])
 	const char *argv_rmjn[] = { "/bin/rm", APP_INFO_DB_FILE_JOURNAL, NULL };
 	xsystem(argv_rmjn);
     }
-
+	setuid(GLOBAL_USER);
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);
 

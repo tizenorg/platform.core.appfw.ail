@@ -16,6 +16,7 @@ BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(xdgmime)
 BuildRequires:  pkgconfig(libtzplatform-config)
 Provides:       libail = %{version}-%{release}
+Requires:  		libcap-tools
 
 %description
 Application Information Library package
@@ -68,8 +69,9 @@ chsmack -a User %TZ_SYS_CONFIG/db/menu_widget/language
 mkdir -p %{TZ_SYS_RO_DESKTOP_APP}
 mkdir -p %{TZ_SYS_RW_DESKTOP_APP}
 mkdir -p %{TZ_SYS_DB}
-su - tizenglobalapp -c ail_initdb 2>/dev/null
 
+setcap cap_sys_admin=ep %{_bindir}/ail_initdb
+ail_initdb 2>/dev/null
 chsmack -a '*' %{TZ_SYS_DB}/.app_info.db*
 
 %postun
@@ -82,7 +84,7 @@ fi
 %manifest %{name}.manifest
 %license LICENSE
 %dir %{TZ_SYS_RW_DESKTOP_APP}
-%attr(06755,root,root) %{_bindir}/ail_initdb
+%attr(06775,root,root) %{_bindir}/ail_initdb
 %{_bindir}/ail_fota
 %{_bindir}/ail_desktop
 %{_bindir}/ail_filter
