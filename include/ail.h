@@ -439,7 +439,7 @@ typedef enum {
  *
  * @see  ail_filter_list_appinfo_foreach()
  */
-typedef ail_cb_ret_e (*ail_list_appinfo_cb) (const ail_appinfo_h appinfo_h, void *user_data);
+typedef ail_cb_ret_e (*ail_list_appinfo_cb) (const ail_appinfo_h appinfo_h, void *user_data,uid_t uid);
 
 /**
  * @fn ail_error_e ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_list_appinfo_cb func, void *user_data)
