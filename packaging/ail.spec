@@ -51,9 +51,6 @@ export FFLAGS="$FFLAGS -DTIZEN_ENGINEER_MODE"
 %install
 %make_install
 
-mkdir -p %{buildroot}%{TZ_SYS_DB}/
-mkdir -p %{buildroot}%{TZ_SYS_RW_DESKTOP_APP}/
-
 %post
 /sbin/ldconfig
 vconftool set -t string db/ail/ail_info "0" -f -s system::vconf_inhouse
@@ -68,12 +65,21 @@ chsmack -a User %TZ_SYS_CONFIG/db/menu_widget/language
 
 mkdir -p %{TZ_SYS_RO_DESKTOP_APP}
 mkdir -p %{TZ_SYS_RW_DESKTOP_APP}
+mkdir -p %{TZ_SYS_RW_APP}
 mkdir -p %{TZ_SYS_DB}
+
+chsmack -a '*' %{TZ_SYS_DB}
+chsmack -a '*' %{TZ_SYS_RW_APP}
+chsmack -a '*' %{TZ_SYS_RW_DESKTOP_APP}
+chsmack -a '*' %{TZ_SYS_RO_DESKTOP_APP}
+
+chmod g+w {TZ_SYS_RW_DESKTOP_APP}
+chmod g+w {TZ_SYS_RO_DESKTOP_APP}
 
 setcap cap_sys_admin=ep %{_bindir}/ail_initdb
 ail_initdb 2>/dev/null
 chsmack -a '*' %{TZ_SYS_DB}/.app_info.db*
-
+ 
 %postun
 /sbin/ldconfig
 if [ $1 == 0 ]; then
@@ -83,7 +89,6 @@ fi
 %files
 %manifest %{name}.manifest
 %license LICENSE
-%dir %{TZ_SYS_RW_DESKTOP_APP}
 %attr(06775,root,root) %{_bindir}/ail_initdb
 %{_bindir}/ail_fota
 %{_bindir}/ail_desktop
