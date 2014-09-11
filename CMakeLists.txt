@@ -36,7 +36,7 @@ INCLUDE(FindPkgConfig)
 pkg_check_modules(LDPC REQUIRED libtzplatform-config)
 
 
-pkg_check_modules(LPKGS REQUIRED glib-2.0 sqlite3 dlog db-util xdgmime vconf libtzplatform-config libsmack)
+pkg_check_modules(LPKGS REQUIRED glib-2.0 sqlite3 dlog db-util xdgmime vconf libtzplatform-config)
 STRING(REPLACE ";" " " EXTRA_CFLAGS "${LPKGS_CFLAGS}")
 SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -fvisibility=hidden")
 

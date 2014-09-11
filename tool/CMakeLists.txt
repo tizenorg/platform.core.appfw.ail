@@ -18,7 +18,7 @@ SET(LISTSRCS src/ail_list.c)
 SET(PKG ail_package)
 SET(PKGSRCS src/ail_package.c)
 
-pkg_check_modules(INITDB_PKGS REQUIRED vconf dlog db-util sqlite3)
+pkg_check_modules(INITDB_PKGS REQUIRED libsmack vconf dlog db-util sqlite3)
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/src)
 
