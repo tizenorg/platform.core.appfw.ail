@@ -76,7 +76,6 @@ chsmack -a '*' %{TZ_SYS_RO_DESKTOP_APP}
 chmod g+w {TZ_SYS_RW_DESKTOP_APP}
 chmod g+w {TZ_SYS_RO_DESKTOP_APP}
 
-setcap cap_sys_admin=ep %{_bindir}/ail_initdb
 ail_initdb 2>/dev/null
 chsmack -a '*' %{TZ_SYS_DB}/.app_info.db*
  
