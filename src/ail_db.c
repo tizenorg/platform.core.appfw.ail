@@ -42,6 +42,11 @@
 
 #define QUERY_CREATE_VIEW_LOCAL "CREATE temp VIEW localname as select distinct * from (select  * from main.localname m union select * from Global.localname g)"
 
+#define SET_SMACK_LABEL(x,uid) \
+	if(smack_setlabel((x), (((uid) == GLOBAL_USER)?"*":"User"), SMACK_LABEL_ACCESS)) _E("failed chsmack -a \"User/*\" %s", x); \
+	else _D("chsmack -a \"User/*\" %s", x);
+	
+	
 #define retv_with_dbmsg_if(expr, val) do { \
 	if (expr) { \
 		_E("db_info.dbUserro: %s", sqlite3_errmsg(db_info.dbUserro)); \
@@ -93,6 +98,7 @@ static int ail_db_change_perm(const char *db_file, uid_t uid)
 	for (i = 0; files[i]; i++) {
 		// Compare git_t type and not group name
 		ret = chown(files[i], uid, userinfo->pw_gid);
+		SET_SMACK_LABEL(files[i],uid)
 		if (ret == -1) {
 			strerror_r(errno, buf, sizeof(buf));
 			_E("FAIL : chown %s %d.%d, because %s", db_file, uid, userinfo->pw_gid, buf);
@@ -141,6 +147,7 @@ char* ail_get_icon_path(uid_t uid)
 	mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
 	if (getuid() == OWNER_ROOT) {
 		ret = chown(result, uid, grpinfo->gr_gid);
+		SET_SMACK_LABEL(result,uid)
 		if (ret == -1) {
 			char buf[BUFSIZE];
 			strerror_r(errno, buf, sizeof(buf));
@@ -193,6 +200,7 @@ static char* ail_get_app_DB(uid_t uid)
 		mkdir(temp, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
 		if (getuid() == OWNER_ROOT) {
 			ret = chown(dir + 1, uid, grpinfo->gr_gid);
+			SET_SMACK_LABEL(dir + 1,uid)
 			if (ret == -1) {
 				char buf[BUFSIZE];
 				strerror_r(errno, buf, sizeof(buf));
@@ -235,6 +243,7 @@ char* al_get_desktop_path(uid_t uid)
 		int ret;
 		mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
 		ret = chown(result, uid, grpinfo->gr_gid);
+		SET_SMACK_LABEL(result,uid)
 		if (ret == -1) {
 			char buf[BUFSIZE];
 			strerror_r(errno, buf, sizeof(buf));
