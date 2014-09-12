@@ -7,5 +7,5 @@ Name: ail
 Description: Application Information Library
 Version: @VERSION@
 Requires: sqlite3 vconf dlog db-util
-Libs: -L@LIBDIR@ -lail -l@LDPC_LIBRARIES@
+Libs: -L@LIBDIR@ -lail @PC_LIB@
 Cflags: -I@INCLUDEDIR@
