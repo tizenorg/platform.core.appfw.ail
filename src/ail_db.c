@@ -69,35 +69,33 @@ static __thread struct {
 };
   static __thread      sqlite3         *dbInit = NULL;
 
-static int ail_db_change_perm(const char *db_file)
+static int ail_db_change_perm(const char *db_file, uid_t uid)
 {
 	char buf[BUFSIZE];
 	char journal_file[BUFSIZE];
 	char *files[3];
 	int ret, i;
-	struct group *grpinfo = NULL;
-	const char *name = "users";
-
+	struct passwd *userinfo = NULL;
 	files[0] = (char *)db_file;
 	files[1] = journal_file;
 	files[2] = NULL;
 
 	retv_if(!db_file, AIL_ERROR_FAIL);
-	if(getuid()) //At this time we should be root to apply this
+	if(getuid() != OWNER_ROOT) //At this time we should be root to apply this
 			return AIL_ERROR_OK;
-
+    userinfo = getpwuid(uid);
+    if (!userinfo) {
+		_E("FAIL: user %d doesn't exist", uid);
+		return AIL_ERROR_FAIL;
+	}
 	snprintf(journal_file, sizeof(journal_file), "%s%s", db_file, "-journal");
 
 	for (i = 0; files[i]; i++) {
-		grpinfo = getgrnam(name);
-		if(grpinfo == NULL)
-			_E("getgrnam(users) returns NULL !");
-
 		// Compare git_t type and not group name
-		ret = chown(files[i], OWNER_ROOT, grpinfo->gr_gid);
+		ret = chown(files[i], uid, userinfo->pw_gid);
 		if (ret == -1) {
 			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", db_file, OWNER_ROOT, grpinfo->gr_gid, buf);
+			_E("FAIL : chown %s %d.%d, because %s", db_file, uid, userinfo->pw_gid, buf);
 			return AIL_ERROR_FAIL;
 		}
 
@@ -315,7 +313,7 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 				ret = do_db_exec(tbls[i], dbInit);
 				retv_if(ret != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
 			}
-			if(AIL_ERROR_OK != ail_db_change_perm(ail_get_app_DB(uid))) {
+			if(AIL_ERROR_OK != ail_db_change_perm(ail_get_app_DB(uid), uid)) {
 				_E("Failed to change permission\n");
 		}
 		} else {
