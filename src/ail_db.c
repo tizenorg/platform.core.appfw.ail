@@ -123,8 +123,11 @@ char* ail_get_icon_path(uid_t uid)
 	char *dir = NULL;
 	struct passwd *userinfo = getpwuid(uid);
 
+	if (uid == 0) {
+		_E("FAIL : Root is not allowed user! please fix it replacing with DEFAULT_USER");
+		return NULL;
+	}
 	if (uid != GLOBAL_USER) {
-
 		if (userinfo == NULL) {
 			_E("getpwuid(%d) returns NULL !", uid);
 			return NULL;
@@ -165,8 +168,11 @@ static char* ail_get_app_DB(uid_t uid)
 	char *dir = NULL;
 	struct passwd *userinfo = getpwuid(uid);
 
+	if (uid == 0) {
+		_E("FAIL : Root is not allowed! switch to DEFAULT_USER");
+		return NULL;
+	}
 	if (uid != GLOBAL_USER) {
-
 		if (userinfo == NULL) {
 			_E("getpwuid(%d) returns NULL !", uid);
 			return NULL;
@@ -219,8 +225,11 @@ char* al_get_desktop_path(uid_t uid)
 	char *dir = NULL;
 	struct passwd *userinfo = getpwuid(uid);
 
+	if (uid == 0) {
+		_E("FAIL : Root is not allowed user! please fix it replacing with DEFAULT_USER");
+		return NULL;
+	}
 	if (uid != GLOBAL_USER) {
-
 		if (userinfo == NULL) {
 			_E("getpwuid(%d) returns NULL !", uid);
 			return NULL;
