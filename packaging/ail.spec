@@ -25,6 +25,7 @@ Application Information Library package
 Summary:        Application Information Library Development files
 Requires:       libail = %{version}-%{release}
 Requires:       pkgconfig(libtzplatform-config)
+Requires:  		pkgconfig(libsmack)
 
 %description devel
 Application Information Library Development files package
