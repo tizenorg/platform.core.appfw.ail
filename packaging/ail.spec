@@ -74,8 +74,8 @@ chsmack -a '*' %{TZ_SYS_RW_APP}
 chsmack -a '*' %{TZ_SYS_RW_DESKTOP_APP}
 chsmack -a '*' %{TZ_SYS_RO_DESKTOP_APP}
 
-chmod g+w {TZ_SYS_RW_DESKTOP_APP}
-chmod g+w {TZ_SYS_RO_DESKTOP_APP}
+chmod g+w %{TZ_SYS_RW_DESKTOP_APP}
+chmod g+w %{TZ_SYS_RO_DESKTOP_APP}
 
 ail_initdb 2>/dev/null
 chsmack -a '*' %{TZ_SYS_DB}/.app_info.db*
