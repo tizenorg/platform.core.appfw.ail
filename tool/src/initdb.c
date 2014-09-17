@@ -263,15 +263,14 @@ int main(int argc, char *argv[])
 		_E("cannot load usr desktop directory.");
 	}
 
-	if (__is_authorized()) {
-		ret = initdb_change_perm(APP_INFO_DB_FILE);
-		if (ret == AIL_ERROR_FAIL) {
-			_E("cannot chown.");
-		}
-		setuid(OWNER_ROOT);
-		SET_DEFAULT_LABEL(APP_INFO_DB_FILE);
-		SET_DEFAULT_LABEL(APP_INFO_DB_FILE_JOURNAL);
+	setuid(OWNER_ROOT);
+	ret = initdb_change_perm(APP_INFO_DB_FILE);
+	if (ret == AIL_ERROR_FAIL) {
+		_E("cannot chown.");
 	}
+	SET_DEFAULT_LABEL(APP_INFO_DB_FILE);
+	SET_DEFAULT_LABEL(APP_INFO_DB_FILE_JOURNAL);
+
 	return AIL_ERROR_OK;
 }
 
