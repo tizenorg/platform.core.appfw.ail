@@ -101,6 +101,7 @@ fi
 %manifest %{name}.manifest
 %license LICENSE
 %attr(06775,root,root) %{_bindir}/ail_initdb
+%attr(0775,root,root) %{_bindir}/ail_initdb_user
 %{_bindir}/ail_fota
 %{_bindir}/ail_desktop
 %{_bindir}/ail_filter
