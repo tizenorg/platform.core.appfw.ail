@@ -544,7 +544,7 @@ ail_error_e db_finalize(sqlite3_stmt *stmt)
 ail_error_e do_db_exec(const char *query, sqlite3 * fileSQL)
 {
 	int ret;
-	char *errmsg;
+	char *errmsg = NULL;
 
 	retv_if(!query, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!fileSQL, AIL_ERROR_DB_FAILED);
@@ -553,7 +553,8 @@ ail_error_e do_db_exec(const char *query, sqlite3 * fileSQL)
 	if (ret != SQLITE_OK) {
 		_E("Cannot execute this query - %s. because %s",
 				query, errmsg? errmsg:"uncatched error");
-		sqlite3_free(errmsg);
+		if(errmsg)
+			sqlite3_free(errmsg);
 		return AIL_ERROR_DB_FAILED;
 	}
 
