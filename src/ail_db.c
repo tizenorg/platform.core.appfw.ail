@@ -324,19 +324,22 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 		NULL
 	};
 
-	if (access(ail_get_app_DB(uid), F_OK)) {
-		if (AIL_ERROR_OK == db_util_open_with_options(ail_get_app_DB(uid), &dbInit, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL))
+	char *db = ail_get_app_DB(uid);
+	char *global_db = ail_get_app_DB(GLOBAL_USER);
+
+	if (db, F_OK) {
+		if (AIL_ERROR_OK == db_util_open_with_options(db, &dbInit, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL))
 		{
 			for (i = 0; tbls[i] != NULL; i++) {
 				ret = do_db_exec(tbls[i], dbInit);
 				retv_if(ret != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
 			}
-			if(AIL_ERROR_OK != ail_db_change_perm(ail_get_app_DB(uid), uid)) {
+			if(AIL_ERROR_OK != ail_db_change_perm(db, uid)) {
 				_E("Failed to change permission\n");
 		}
 		} else {
 			dbInit = NULL;
-			_E("Failed to create table %s\n", ail_get_app_DB(uid));
+			_E("Failed to create table %s\n", db);
 		}
 	}
 	if(dbInit) {
@@ -347,48 +350,57 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 	if(mode & DB_OPEN_RO) {
 		if(uid != GLOBAL_USER) {
 			if (!db_info.dbUserro) {
-				db_util_open_with_options(ail_get_app_DB(uid), &db_info.dbUserro, SQLITE_OPEN_READONLY, NULL);
+				db_util_open_with_options(db, &db_info.dbUserro, SQLITE_OPEN_READONLY, NULL);
 				char query_attach[AIL_SQL_QUERY_MAX_LEN];
 				char query_view_app[AIL_SQL_QUERY_MAX_LEN];
 				char query_view_local[AIL_SQL_QUERY_MAX_LEN];
-				snprintf(query_attach, AIL_SQL_QUERY_MAX_LEN, QUERY_ATTACH, ail_get_app_DB(GLOBAL_USER));
+				snprintf(query_attach, AIL_SQL_QUERY_MAX_LEN, QUERY_ATTACH, global_db);
 				if (db_exec_usr_ro(query_attach) < 0) {
 					_D("executing query_attach : %s", query_attach );
-					return AIL_ERROR_DB_FAILED;
+					goto error;
 				}
 				snprintf(query_view_app, AIL_SQL_QUERY_MAX_LEN, QUERY_CREATE_VIEW_APP);
 				if (db_exec_usr_ro(query_view_app) < 0) {
 					_D("executing query_attach : %s", query_view_app );
-					return AIL_ERROR_DB_FAILED;
+					goto error;
 				}
 
 				snprintf(query_view_local, AIL_SQL_QUERY_MAX_LEN, QUERY_CREATE_VIEW_LOCAL);
 				if (db_exec_usr_ro(query_view_local) < 0) {
 					_D("executing query_attach : %s", query_view_local );
-					return AIL_ERROR_DB_FAILED;
+					goto error;
 				}
 			}
 		} else {
 			if (!db_info.dbGlobalro) {
-				ret = db_util_open_with_options(ail_get_app_DB(GLOBAL_USER), &db_info.dbGlobalro, SQLITE_OPEN_READONLY, NULL);
+				ret = db_util_open_with_options(global_db, &db_info.dbGlobalro, SQLITE_OPEN_READONLY, NULL);
 				retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 			}
 		}
- }
+	}
 	if(mode & DB_OPEN_RW) {
 		if(uid != GLOBAL_USER) {
 			if(!db_info.dbUserrw){
-				ret = db_util_open(ail_get_app_DB(uid), &db_info.dbUserrw, 0);
+				ret = db_util_open(db, &db_info.dbUserrw, 0);
 			}
 		} else {
 			if(!db_info.dbGlobalrw){
-				ret = db_util_open(ail_get_app_DB(GLOBAL_USER), &db_info.dbGlobalrw, 0);
+				ret = db_util_open(global_db, &db_info.dbGlobalrw, 0);
 			}
 		}
 		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 	}
 
+	free(global_db);
+	free(db);
+
 	return AIL_ERROR_OK;
+
+error:
+	free(global_db);
+	free(db);
+
+	return AIL_ERROR_DB_FAILED;
 }
 
 
