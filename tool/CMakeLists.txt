@@ -1,7 +1,7 @@
 #AIL init DB build script
 
 SET(INITDB ail_initdb)
-SET(SRCS src/initdb.c)
+SET(SRCS src/initdb.c ../src/ail_db.c)
 
 SET(FOTA ail_fota)
 SET(FOTASRCS src/ail_fota.c)

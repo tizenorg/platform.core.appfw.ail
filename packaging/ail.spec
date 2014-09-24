@@ -54,6 +54,13 @@ export FFLAGS="$FFLAGS -DTIZEN_ENGINEER_MODE"
 
 %post
 /sbin/ldconfig
+# Create tizenglobalapp user needed for global installation
+%{_sbindir}/useradd -d %TZ_SYS_RW_APP -m %TZ_SYS_GLOBALAPP_USER -r -c "system user for common applications" -g root
+
+#mkdir -p %TZ_SYS_RW_APP/.config/xwalk-service/applications
+#cd %TZ_SYS_RW_APP/
+#ln -s .config/xwalk-service/applications/
+
 vconftool set -t string db/ail/ail_info "0" -f -s system::vconf_inhouse
 vconftool set -t string db/menuscreen/desktop "0" -f -s system::vconf_inhouse
 vconftool set -t string db/menu_widget/language "en_US.utf8" -f -s system::vconf_inhouse
@@ -76,6 +83,10 @@ chsmack -a '*' %{TZ_SYS_RO_DESKTOP_APP}
 
 chmod g+w %{TZ_SYS_RW_DESKTOP_APP}
 chmod g+w %{TZ_SYS_RO_DESKTOP_APP}
+chown %TZ_SYS_GLOBALAPP_USER:root %{TZ_SYS_RW_DESKTOP_APP}
+chown %TZ_SYS_GLOBALAPP_USER:root %{TZ_SYS_RO_DESKTOP_APP}
+chown %TZ_SYS_GLOBALAPP_USER:root %{TZ_SYS_RW_APP}
+chown %TZ_SYS_GLOBALAPP_USER:root %{TZ_SYS_DB}
 
 ail_initdb 2>/dev/null
 chsmack -a '*' %{TZ_SYS_DB}/.app_info.db*

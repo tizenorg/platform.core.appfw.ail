@@ -32,6 +32,7 @@
 
 #include "ail.h"
 #include "ail_private.h"
+#include "ail_db.h"
 
 
 #ifdef _E
@@ -253,11 +254,11 @@ int main(int argc, char *argv[])
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);
 	setresuid(GLOBAL_USER, GLOBAL_USER, OWNER_ROOT);
-	ret = initdb_count_app();
-	if (ret > 0) {
-		_D("Some Apps in the App Info DB.");
-	}
 
+	if (db_open(DB_OPEN_RW, GLOBAL_USER) != AIL_ERROR_OK) {
+		_E("Fail to create system databases");
+		return AIL_ERROR_DB_FAILED;
+	}
 	ret = initdb_load_directory(USR_DESKTOP_DIRECTORY);
 	if (ret == AIL_ERROR_FAIL) {
 		_E("cannot load usr desktop directory.");
