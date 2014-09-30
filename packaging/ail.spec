@@ -75,11 +75,15 @@ mkdir -p %{TZ_SYS_RO_DESKTOP_APP}
 mkdir -p %{TZ_SYS_RW_DESKTOP_APP}
 mkdir -p %{TZ_SYS_RW_APP}
 mkdir -p %{TZ_SYS_DB}
+mkdir -p %{TZ_SYS_RW_ICONS}/default/small
 
 chsmack -a '*' %{TZ_SYS_DB}
 chsmack -a '*' %{TZ_SYS_RW_APP}
 chsmack -a '*' %{TZ_SYS_RW_DESKTOP_APP}
 chsmack -a '*' %{TZ_SYS_RO_DESKTOP_APP}
+chsmack -a '*' %{TZ_SYS_RW_ICONS}
+chsmack -a '*' %{TZ_SYS_RW_ICONS}/default
+chsmack -a '*' %{TZ_SYS_RW_ICONS}/default/small/
 
 chmod g+w %{TZ_SYS_RW_DESKTOP_APP}
 chmod g+w %{TZ_SYS_RO_DESKTOP_APP}
@@ -87,6 +91,8 @@ chown %TZ_SYS_GLOBALAPP_USER:root %{TZ_SYS_RW_DESKTOP_APP}
 chown %TZ_SYS_GLOBALAPP_USER:root %{TZ_SYS_RO_DESKTOP_APP}
 chown %TZ_SYS_GLOBALAPP_USER:root %{TZ_SYS_RW_APP}
 chown %TZ_SYS_GLOBALAPP_USER:root %{TZ_SYS_DB}
+chown %TZ_SYS_GLOBALAPP_USER:root %{TZ_SYS_DB}
+chown %TZ_SYS_GLOBALAPP_USER:root -R %{TZ_SYS_RW_ICONS}
 
 ail_initdb 2>/dev/null
 chsmack -a '*' %{TZ_SYS_DB}/.app_info.db*
