@@ -160,10 +160,19 @@ char* ail_get_icon_path(uid_t uid)
 	return result;
 }
 
-static char* ail_get_app_DB(uid_t uid)
+char* ail_get_app_DB_journal(uid_t uid)
+{
+
+	char *app_path = ail_get_app_DB(uid);
+	char* result = NULL;
+
+	asprintf(&result, "%s-journal", app_path);
+	return  result;
+}
+
+char* ail_get_app_DB(uid_t uid)
 {
 	char *result = NULL;
-	char *journal = NULL;
 	struct group *grpinfo = NULL;
 	char *dir = NULL;
 	struct passwd *userinfo = getpwuid(uid);
@@ -188,10 +197,8 @@ static char* ail_get_app_DB(uid_t uid)
 			return NULL;
 		}
 		asprintf(&result, "%s/.applications/dbspace/.app_info.db", userinfo->pw_dir);
-		asprintf(&journal, "%s/.applications/dbspace/.app_info.db-journal", userinfo->pw_dir);
 	} else {
 			result = strdup(APP_INFO_DB_FILE);
-			journal = strdup(APP_INFO_DB_FILE_JOURNAL);
 	}
 	char *temp = strdup(result);
 	dir = strrchr(temp, '/');
@@ -336,7 +343,7 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 			}
 			if(AIL_ERROR_OK != ail_db_change_perm(db, uid)) {
 				_E("Failed to change permission\n");
-		}
+			}
 		} else {
 			dbInit = NULL;
 			_E("Failed to create table %s\n", db);
