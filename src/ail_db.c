@@ -334,7 +334,7 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 	char *db = ail_get_app_DB(uid);
 	char *global_db = ail_get_app_DB(GLOBAL_USER);
 
-	if (db, F_OK) {
+	if (access(db, F_OK)) {
 		if (AIL_ERROR_OK == db_util_open_with_options(db, &dbInit, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL))
 		{
 			for (i = 0; tbls[i] != NULL; i++) {
