@@ -102,6 +102,8 @@ static int ail_db_change_perm(const char *db_file, uid_t uid)
 		if (ret == -1) {
 			strerror_r(errno, buf, sizeof(buf));
 			_E("FAIL : chown %s %d.%d, because %s", db_file, uid, userinfo->pw_gid, buf);
+			if(journal_file)
+				free(journal_file);
 			return AIL_ERROR_FAIL;
 		}
 
@@ -144,7 +146,7 @@ char* ail_get_icon_path(uid_t uid)
 		}
 		asprintf(&result, "%s/.applications/icons/", userinfo->pw_dir);
 	} else {
-		result = tzplatform_mkpath(TZ_SYS_RW_ICONS, "/");
+		result = strdup(tzplatform_mkpath(TZ_SYS_RW_ICONS, "/"));
 	}
 	int ret = mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
 	if (ret == -1 && errno != EEXIST) {
@@ -253,7 +255,7 @@ char* al_get_desktop_path(uid_t uid)
 		}
 		asprintf(&result, "%s/.applications/desktop/", userinfo->pw_dir);
 	} else {
-		result = tzplatform_mkpath(TZ_SYS_RW_DESKTOP_APP, "/");
+		result = strdup(tzplatform_mkpath(TZ_SYS_RW_DESKTOP_APP, "/"));
 	}
 		int ret = mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
 		if (ret == -1 && errno != EEXIST) {

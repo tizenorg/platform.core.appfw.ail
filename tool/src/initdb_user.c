@@ -169,16 +169,19 @@ static int __is_authorized()
 int main(int argc, char *argv[])
 {
 	int ret;
+	char * db_path = ail_get_app_DB(getuid());
+	char * dbjournal_path = ail_get_app_DB_journal(getuid());
+	char * desktop_path = al_get_desktop_path(getuid());
 
 	if (!__is_authorized()) {
 		fprintf(stderr, "You are not an authorized user!\n");
 		_D("You are root user! Please switch to a regular user\n");
 	}
 	else {
-		if(remove(ail_get_app_DB(getuid())))
-			_E(" %s is not removed", ail_get_app_DB(getuid()));
-		if(remove(ail_get_app_DB_journal(getuid())))
-			_E(" %s is not removed", ail_get_app_DB_journal(getuid()));
+		if(remove(db_path))
+			_E(" %s is not removed", db_path);
+		if(remove(dbjournal_path))
+			_E(" %s is not removed", dbjournal_path);
 	}
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);
@@ -187,11 +190,17 @@ int main(int argc, char *argv[])
 		_D("Some Apps in the App Info DB.");
 	}
 
-	ret = initdb_user_load_directory(al_get_desktop_path(getuid()));
+	ret = initdb_user_load_directory(desktop_path);
 	if (ret == AIL_ERROR_FAIL) {
 		_E("cannot load usr desktop directory.");
 	}
 
+	if(db_path)
+		free(db_path);
+	if(dbjournal_path)
+		free(dbjournal_path);
+	if(desktop_path)
+		free(desktop_path);
 	return AIL_ERROR_OK;
 }
 

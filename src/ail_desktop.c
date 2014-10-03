@@ -789,7 +789,7 @@ char *_pkgname_to_desktop(const char *package, uid_t uid)
 
 	retv_if(!package, NULL);
 
-  desktop_path = al_get_desktop_path(uid);
+	desktop_path = al_get_desktop_path(uid);
 
 	size = strlen(desktop_path) + strlen(package) + 10;
 	desktop = malloc(size);
@@ -798,7 +798,8 @@ char *_pkgname_to_desktop(const char *package, uid_t uid)
   snprintf(desktop, size, "%s/%s.desktop", desktop_path, package);
 
   _D("uid: %d / desktop: [%s]\n",  uid, desktop);
-
+  if(desktop_path)
+		free(desktop_path);
 	return desktop;
 }
 
