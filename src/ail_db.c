@@ -146,9 +146,10 @@ char* ail_get_icon_path(uid_t uid)
 	} else {
 		result = tzplatform_mkpath(TZ_SYS_RW_ICONS, "/");
 	}
-	int ret;
-	mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-	if (getuid() == OWNER_ROOT) {
+	int ret = mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+	if (ret == -1 && errno != EEXIST) {
+		_E("FAIL : to create directory %s %d", result, errno);
+	} else if (getuid() == OWNER_ROOT) {
 		ret = chown(result, uid, ((grpinfo)?grpinfo->gr_gid:0));
 		SET_SMACK_LABEL(result,uid)
 		if (ret == -1) {
@@ -208,10 +209,10 @@ char* ail_get_app_DB(uid_t uid)
 		return result;
 	}
 	*dir = 0;
-	if ((uid != GLOBAL_USER)||((uid == GLOBAL_USER)&& (geteuid() == 0 ))) {
-		int ret;
-		mkdir(temp, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-		if (getuid() == OWNER_ROOT) {
+		int ret = mkdir(temp, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+		if (ret == -1 && errno != EEXIST) {
+			_E("FAIL : to create directory %s %d", temp, errno);
+		} else if (getuid() == OWNER_ROOT) {
 			ret = chown(temp, uid, ((grpinfo)?grpinfo->gr_gid:0));
 			SET_SMACK_LABEL(temp,uid)
 			if (ret == -1) {
@@ -219,8 +220,7 @@ char* ail_get_app_DB(uid_t uid)
 				strerror_r(errno, buf, sizeof(buf));
 				_E("FAIL : chown %s %d.%d, because %s", temp, uid, ((grpinfo)?grpinfo->gr_gid:0), buf);
 			}
-	}
-	}
+		}
 	free(temp);
 	return result;
 }
@@ -255,17 +255,18 @@ char* al_get_desktop_path(uid_t uid)
 	} else {
 		result = tzplatform_mkpath(TZ_SYS_RW_DESKTOP_APP, "/");
 	}
-	if ((uid != GLOBAL_USER)||((uid == GLOBAL_USER)&& (geteuid() == 0 ))) {
-		int ret;
-		mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-		ret = chown(result, uid, ((grpinfo)?grpinfo->gr_gid:0));
-		SET_SMACK_LABEL(result,uid)
-		if (ret == -1) {
-			char buf[BUFSIZE];
-			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", result, uid, ((grpinfo)?grpinfo->gr_gid:0), buf);
+		int ret = mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+		if (ret == -1 && errno != EEXIST) {
+			_E("FAIL : to create directory %s %d", result, errno);
+		} else if (getuid() == OWNER_ROOT) {
+			ret = chown(result, uid, ((grpinfo)?grpinfo->gr_gid:0));
+			SET_SMACK_LABEL(result,uid)
+			if (ret == -1) {
+				char buf[BUFSIZE];
+				strerror_r(errno, buf, sizeof(buf));
+				_E("FAIL : chown %s %d.%d, because %s", result, uid, ((grpinfo)?grpinfo->gr_gid:0), buf);
+			}
 		}
-	}
 	return result;
 }
 
@@ -341,7 +342,7 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 				ret = do_db_exec(tbls[i], dbInit);
 				retv_if(ret != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
 			}
-			if(AIL_ERROR_OK != ail_db_change_perm(db, uid)) {
+			if(getuid() == OWNER_ROOT && AIL_ERROR_OK != ail_db_change_perm(db, uid)) {
 				_E("Failed to change permission\n");
 			}
 		} else {
