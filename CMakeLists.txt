@@ -2,10 +2,6 @@
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 PROJECT(ail C)
-OPTION(SMACK "Enable smack support" ON)
-IF(SMACK)
-    ADD_DEFINITIONS("-DWRT_SMACK_ENABLED")  # enable smack
-ENDIF(SMACK)
 SET(LIBNAME "lib${PROJECT_NAME}")
 SET(PREFIX ${CMAKE_INSTALL_PREFIX})
 SET(BINDIR "${PREFIX}/bin")
@@ -33,12 +29,12 @@ INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
 
 INCLUDE(FindPkgConfig)
 
-pkg_check_modules(LDPC REQUIRED libtzplatform-config libsmack)
+pkg_check_modules(LDPC REQUIRED libtzplatform-config)
 FOREACH(flag ${LDPC_LIBRARIES})
 	SET(PC_LIB "${PC_LIB} -l${flag}")
 ENDFOREACH(flag)
 
-pkg_check_modules(LPKGS REQUIRED glib-2.0 sqlite3 dlog db-util xdgmime vconf libtzplatform-config)
+pkg_check_modules(LPKGS REQUIRED glib-2.0 sqlite3 dlog db-util xdgmime vconf libtzplatform-config libsmack)
 STRING(REPLACE ";" " " EXTRA_CFLAGS "${LPKGS_CFLAGS}")
 SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} -fvisibility=hidden")
 

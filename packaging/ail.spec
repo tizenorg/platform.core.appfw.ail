@@ -16,7 +16,6 @@ BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(xdgmime)
 BuildRequires:  pkgconfig(libtzplatform-config)
 Provides:       libail = %{version}-%{release}
-Requires:  		libcap-tools
 
 %description
 Application Information Library package
@@ -25,7 +24,7 @@ Application Information Library package
 Summary:        Application Information Library Development files
 Requires:       libail = %{version}-%{release}
 Requires:       pkgconfig(libtzplatform-config)
-Requires:  		pkgconfig(libsmack)
+Requires:       pkgconfig(libsmack)
 
 %description devel
 Application Information Library Development files package
@@ -35,7 +34,7 @@ Application Information Library Development files package
 cp %{SOURCE1001} .
 
 %build
-CFLAGS+=" -fpic"
+CFLAGS="$CFLAGS -fpic"
 
 %if 0%{?tizen_build_binary_release_type_eng}
 export CFLAGS="$CFLAGS -DTIZEN_ENGINEER_MODE"
@@ -44,8 +43,7 @@ export FFLAGS="$FFLAGS -DTIZEN_ENGINEER_MODE"
 %endif
 
 %cmake .  -DTZ_SYS_RW_DESKTOP_APP=%TZ_SYS_RW_DESKTOP_APP \
-          -DBUILD_PKGTYPE=rpm \
-		  -DSMACK=Off
+          -DBUILD_PKGTYPE=rpm
 
 %__make %{?_smp_mflags}
 
@@ -57,8 +55,8 @@ ldconfig
 # Create tizenglobalapp user needed for global installation
 useradd -d %TZ_SYS_RW_APP -m %TZ_SYS_GLOBALAPP_USER -r -c "system user for common applications" -g root
 
-#mkdir -p %TZ_SYS_RW_APP/.config/xwalk-service/applications
-#cd %TZ_SYS_RW_APP/
+#mkdir -p %%TZ_SYS_RW_APP/.config/xwalk-service/applications
+#cd %%TZ_SYS_RW_APP/
 #ln -s .config/xwalk-service/applications/
 
 vconftool set -t string db/ail/ail_info "0" -f -s system::vconf_inhouse
