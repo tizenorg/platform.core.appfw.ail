@@ -64,7 +64,7 @@ static int __fallback_locale_cb(void *data, int ncols, char **coltxt, char **col
 	return 0;
 }
 
-static int __check_validation_of_qurey_cb(void *data, int ncols, char **coltxt, char **colname)
+static int __check_validation_of_query_cb(void *data, int ncols, char **coltxt, char **colname)
 {
 	int *p = (int*)data;
 	*p = atoi(coltxt[0]);
@@ -77,7 +77,7 @@ static int __check_app_locale_from_app_localized_info_by_exact(const char *appid
 	char query[MAX_QUERY_LEN];
 
 	snprintf(query, MAX_QUERY_LEN, "select exists(select locale from localname where package='%s' and locale='%s')", appid, locale);
-	db_exec_sqlite_query(query, __check_validation_of_qurey_cb, (void *)&result_query);
+	db_exec_sqlite_query(query, __check_validation_of_query_cb, (void *)&result_query);
 
 	return result_query;
 }
@@ -91,7 +91,7 @@ static int __check_app_locale_from_app_localized_info_by_fallback(const char *ap
 	strncpy(lang, locale, LANGUAGE_LENGTH);
 
 	snprintf(query, MAX_QUERY_LEN, "select exists(select locale from localname where package='%s' and locale like '%s%s')", appid, lang, wildcard);
-	db_exec_sqlite_query(query, __check_validation_of_qurey_cb, (void *)&result_query);
+	db_exec_sqlite_query(query, __check_validation_of_query_cb, (void *)&result_query);
 
 	return result_query;
 }

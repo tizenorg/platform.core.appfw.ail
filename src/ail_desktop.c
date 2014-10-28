@@ -789,7 +789,7 @@ char *_pkgname_to_desktop(const char *package, uid_t uid)
 
 	retv_if(!package, NULL);
 
-  desktop_path = al_get_desktop_path(uid);
+  desktop_path = ail_get_desktop_path(uid);
 
 	size = strlen(desktop_path) + strlen(package) + 10;
 	desktop = malloc(size);

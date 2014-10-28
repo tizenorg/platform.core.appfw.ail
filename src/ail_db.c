@@ -225,7 +225,7 @@ char* ail_get_app_DB(uid_t uid)
 	return result;
 }
 
-char* al_get_desktop_path(uid_t uid)
+char* ail_get_desktop_path(uid_t uid)
 {
 	char *result = NULL;
 	struct group *grpinfo = NULL;

@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
 		_D("Some Apps in the App Info DB.");
 	}
 
-	ret = initdb_user_load_directory(al_get_desktop_path(getuid()));
+	ret = initdb_user_load_directory(ail_get_desktop_path(getuid()));
 	if (ret == AIL_ERROR_FAIL) {
 		_E("cannot load usr desktop directory.");
 	}

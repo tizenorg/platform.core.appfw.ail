@@ -39,7 +39,7 @@ typedef int (*sqlite_query_callback)(void *data, int ncols, char **coltxt, char 
 char* ail_get_icon_path(uid_t uid);
 char* ail_get_app_DB_journal(uid_t uid);
 char* ail_get_app_DB(uid_t uid);
-char* al_get_desktop_path(uid_t uid);
+char* ail_get_desktop_path(uid_t uid);
 ail_error_e db_open(db_open_mode mode, uid_t uid);
 ail_error_e db_prepare(const char *query, sqlite3_stmt **stmt);
 ail_error_e db_prepare_globalro(const char *query, sqlite3_stmt **stmt);
