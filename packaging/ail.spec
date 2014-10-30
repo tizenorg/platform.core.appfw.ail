@@ -92,7 +92,7 @@ chown %TZ_SYS_GLOBALAPP_USER:root %{TZ_SYS_DB}
 chown %TZ_SYS_GLOBALAPP_USER:root %{TZ_SYS_DB}
 chown %TZ_SYS_GLOBALAPP_USER:root -R %{TZ_SYS_RW_ICONS}
 
-ail_initdb 2>/dev/null
+ail_createdb 2>/dev/null
 chsmack -a '*' %{TZ_SYS_DB}/.app_info.db*
  
 %postun
@@ -104,6 +104,11 @@ fi
 %files
 %manifest %{name}.manifest
 %license LICENSE
+%attr(06775,root,root) %{_bindir}/ail_createdb
+%attr(06775,root,root) %{_bindir}/ail_createdb_user
+%attr(06775,root,root) %{_bindir}/ail_syncdb
+%attr(0775,root,root) %{_bindir}/ail_syncdb_user
+#obsolete tools
 %attr(06775,root,root) %{_bindir}/ail_initdb
 %attr(0775,root,root) %{_bindir}/ail_initdb_user
 %{_bindir}/ail_fota
