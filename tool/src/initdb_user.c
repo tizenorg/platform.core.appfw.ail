@@ -173,6 +173,7 @@ int main(int argc, char *argv[])
 	if (!__is_authorized()) {
 		fprintf(stderr, "You are not an authorized user!\n");
 		_D("You are root user! Please switch to a regular user\n");
+		return -1;
 	}
 	else {
 		if(remove(ail_get_app_DB(getuid())))
