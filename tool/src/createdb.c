@@ -2,8 +2,10 @@
  * ail
  *
  * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
+ * Copyright (C) 2013-2014 Intel Corporation.
  *
- * Contact: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
+ * Contact: Sabera Djelti <sabera.djelti@open.eurogiciel.org>,
+ * Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +51,7 @@
 	if(smack_setlabel((x), "*", SMACK_LABEL_ACCESS)) _E("failed chsmack -a \"*\" %s", x) \
 	else _D("chsmack -a \"*\" %s", x)
 
-static int initdb_count_app(void)
+static int createb_count_app(void)
 {
 	ail_filter_h filter;
 	ail_error_e ret;
@@ -77,86 +79,7 @@ static int initdb_count_app(void)
 }
 
 
-
-char* _desktop_to_package(const char* desktop)
-{
-	char *package, *tmp;
-
-	retv_if(!desktop, NULL);
-
-	package = strdup(desktop);
-	retv_if(!package, NULL);
-
-	tmp = strrchr(package, '.');
-	if(tmp == NULL) {
-		_E("[%s] is not a desktop file", package);
-		free(package);
-		return NULL;
-	}
-
-	if (strcmp(tmp, ".desktop")) {
-		_E("%s is not a desktop file", desktop);
-		free(package);
-		return NULL;
-	}
-
-	*tmp = '\0';
-
-	return package;
-}
-
-
-
-int initdb_load_directory(const char *directory)
-{
-	DIR *dir;
-	struct dirent entry, *result;
-	int len, ret;
-	char buf[BUFSZE];
-	int total_cnt = 0;
-	int ok_cnt = 0;
-
-	// desktop file
-	dir = opendir(directory);
-	if (!dir) {
-		if (strerror_r(errno, buf, sizeof(buf)) == 0)
-			_E("Failed to access the [%s] because %s\n", directory, buf);
-		return AIL_ERROR_FAIL;
-	}
-
-	len = strlen(directory) + 1;
-	_D("Loading desktop files from %s", directory);
-
-	for (ret = readdir_r(dir, &entry, &result);
-			ret == 0 && result != NULL;
-			ret = readdir_r(dir, &entry, &result)) {
-		char *package;
-
-		if (entry.d_name[0] == '.') continue;
-		total_cnt++;
-		package = _desktop_to_package(entry.d_name);
-		if (!package) {
-			_E("Failed to convert file to package[%s]", entry.d_name);
-			continue;
-		}
-
-		if (ail_desktop_add(package) != AIL_ERROR_OK) {
-			_E("Failed to add a package[%s]", package);
-		} else {
-			ok_cnt++;
-		}
-		free(package);
-	}
-
-	_D("Application-Desktop process : Success [%d], fail[%d], total[%d] \n", ok_cnt, total_cnt-ok_cnt, total_cnt);
-	closedir(dir);
-
-	return AIL_ERROR_OK;
-}
-
-
-
-static int initdb_change_perm(const char *db_file)
+static int createdb_change_perm(const char *db_file)
 {
 	char buf[BUFSZE];
 	char journal_file[BUFSZE];
@@ -244,13 +167,13 @@ int main(int argc, char *argv[])
 	if (!__is_authorized()) {
 		fprintf(stderr, "You are not an authorized user!\n");
 		_D("You are not root user!\n");
-		return -1;
 	}
 	else {
 		if(remove(APP_INFO_DB_FILE))
 			_E(" %s is not removed",APP_INFO_DB_FILE);
 		if(remove(APP_INFO_DB_FILE_JOURNAL))
 			_E(" %s is not removed",APP_INFO_DB_FILE_JOURNAL);
+			return -1;
 	}
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);
@@ -260,13 +183,9 @@ int main(int argc, char *argv[])
 		_E("Fail to create system databases");
 		return AIL_ERROR_DB_FAILED;
 	}
-	ret = initdb_load_directory(USR_DESKTOP_DIRECTORY);
-	if (ret == AIL_ERROR_FAIL) {
-		_E("cannot load usr desktop directory.");
-	}
 
 	setuid(OWNER_ROOT);
-	ret = initdb_change_perm(APP_INFO_DB_FILE);
+	ret = createdb_change_perm(APP_INFO_DB_FILE);
 	if (ret == AIL_ERROR_FAIL) {
 		_E("cannot chown.");
 	}

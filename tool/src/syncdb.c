@@ -2,8 +2,10 @@
  * ail
  *
  * Copyright (c) 2000 - 2011 Samsung Electronics Co., Ltd. All rights reserved.
+ * Copyright (C) 2013-2014 Intel Corporation.
  *
- * Contact: Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
+ * Contact: Sabera Djelti <sabera.djelti@open.eurogiciel.org>,
+ * Jayoun Lee <airjany@samsung.com>, Sewook Park <sewook7.park@samsung.com>, Jaeho Lee <jaeho81.lee@samsung.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +51,7 @@
 	if(smack_setlabel((x), "*", SMACK_LABEL_ACCESS)) _E("failed chsmack -a \"*\" %s", x) \
 	else _D("chsmack -a \"*\" %s", x)
 
-static int initdb_count_app(void)
+static int syncdb_count_app(void)
 {
 	ail_filter_h filter;
 	ail_error_e ret;
@@ -107,7 +109,7 @@ char* _desktop_to_package(const char* desktop)
 
 
 
-int initdb_load_directory(const char *directory)
+int syncdb_load_directory(const char *directory)
 {
 	DIR *dir;
 	struct dirent entry, *result;
@@ -156,7 +158,7 @@ int initdb_load_directory(const char *directory)
 
 
 
-static int initdb_change_perm(const char *db_file)
+static int syncdb_change_perm(const char *db_file)
 {
 	char buf[BUFSZE];
 	char journal_file[BUFSZE];
@@ -246,11 +248,9 @@ int main(int argc, char *argv[])
 		_D("You are not root user!\n");
 		return -1;
 	}
-	else {
-		if(remove(APP_INFO_DB_FILE))
-			_E(" %s is not removed",APP_INFO_DB_FILE);
-		if(remove(APP_INFO_DB_FILE_JOURNAL))
-			_E(" %s is not removed",APP_INFO_DB_FILE_JOURNAL);
+	if (access(APP_INFO_DB_FILE, F_OK)) {
+		fprintf(stderr, "Application database %s is missing, please use ail_createdb to create one before\n", APP_INFO_DB_FILE);
+		return AIL_ERROR_FAIL;
 	}
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);
@@ -260,18 +260,10 @@ int main(int argc, char *argv[])
 		_E("Fail to create system databases");
 		return AIL_ERROR_DB_FAILED;
 	}
-	ret = initdb_load_directory(USR_DESKTOP_DIRECTORY);
+	ret = syncdb_load_directory(USR_DESKTOP_DIRECTORY);
 	if (ret == AIL_ERROR_FAIL) {
 		_E("cannot load usr desktop directory.");
 	}
-
-	setuid(OWNER_ROOT);
-	ret = initdb_change_perm(APP_INFO_DB_FILE);
-	if (ret == AIL_ERROR_FAIL) {
-		_E("cannot chown.");
-	}
-	SET_DEFAULT_LABEL(APP_INFO_DB_FILE);
-	SET_DEFAULT_LABEL(APP_INFO_DB_FILE_JOURNAL);
 
 	return AIL_ERROR_OK;
 }
