@@ -7,7 +7,6 @@ Group:          Application Framework/Libraries
 Source0:        %{name}-%{version}.tar.gz
 Source1001:     ail.manifest
 BuildRequires:  cmake
-BuildRequires:  vconf-keys-devel
 BuildRequires:  pkgconfig(db-util)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(libsmack)
