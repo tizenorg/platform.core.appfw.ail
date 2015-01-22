@@ -27,7 +27,7 @@
 #include "ail.h"
 #include "ail_sql.h"
 #include "ail_db.h"
-#include "vconf.h"
+#include "ail_vconf.h"
 #include "ail_private.h"
 
 static const char *filter[] = {
@@ -77,7 +77,7 @@ inline char *sql_get_locale(void)
 	char *r;
 	char buf[6];
 
-	retv_if ((l = vconf_get_str(VCONFKEY_LANGSET)) == NULL, NULL);
+	retv_if ((l = ail_vconf_get_str(VCONFKEY_LANGSET)) == NULL, NULL);
 	snprintf(buf, sizeof(buf), "%s", l);
 	free(l);
 

@@ -33,7 +33,6 @@
 #include <tzplatform_config.h>
 #include <xdgmime.h>
 
-#include <vconf.h>
 #include <glib.h>
 #include <grp.h>
 #include <pwd.h>
@@ -42,6 +41,7 @@
 #include "ail_db.h"
 #include "ail_sql.h"
 #include "ail.h"
+#include "ail_vconf.h"
 
 #define BUFSIZE 4096
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
@@ -260,7 +260,7 @@ _get_icon_with_path(char* icon, uid_t uid)
 
 /* "db/setting/theme" is not exist */
 #if 0
-		theme = vconf_get_str("db/setting/theme");
+		theme = ail_vconf_get_str("db/setting/theme");
 		if (!theme) {
 			theme = strdup("default");
 			if(!theme) {
@@ -1581,8 +1581,8 @@ static ail_error_e _send_db_done_noti(noti_type type, const char *package)
 	retv_if(!noti_string, AIL_ERROR_OUT_OF_MEMORY);
 
 	snprintf(noti_string, size + 1, "%s:%s:%u", type_string, package, getuid());
-	vconf_set_str(VCONFKEY_AIL_INFO_STATE, noti_string);
-	vconf_set_str(VCONFKEY_MENUSCREEN_DESKTOP, noti_string); // duplicate, will be removed
+	ail_vconf_set_str(VCONFKEY_AIL_INFO_STATE, noti_string);
+	ail_vconf_set_str(VCONFKEY_MENUSCREEN_DESKTOP, noti_string); // duplicate, will be removed
 	_D("Noti : %s", noti_string);
 
 	free(noti_string);

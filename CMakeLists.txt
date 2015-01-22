@@ -23,6 +23,7 @@ SET(SRCS
 	src/ail_package.c
 	src/ail_desktop.c
 	src/ail_convert.c
+	src/ail_vconf.c
 )
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
