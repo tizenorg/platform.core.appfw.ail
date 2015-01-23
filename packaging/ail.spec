@@ -58,15 +58,9 @@ useradd -d %TZ_SYS_RW_APP -m %TZ_SYS_GLOBALAPP_USER -r -c "system user for commo
 #cd %%TZ_SYS_RW_APP/
 #ln -s .config/xwalk-service/applications/
 
-vconftool set -t string db/ail/ail_info "0" -f -s system::vconf_inhouse
-vconftool set -t string db/menuscreen/desktop "0" -f -s system::vconf_inhouse
-vconftool set -t string db/menu_widget/language "en_US.utf8" -f -s system::vconf_inhouse
-chsmack -a User %TZ_SYS_CONFIG/db/ail
-chsmack -a User %TZ_SYS_CONFIG/db/ail/ail_info
-chsmack -a User %TZ_SYS_CONFIG/db/menuscreen
-chsmack -a User %TZ_SYS_CONFIG/db/menuscreen/desktop
-chsmack -a User %TZ_SYS_CONFIG/db/menu_widget
-chsmack -a User %TZ_SYS_CONFIG/db/menu_widget/language
+vconftool set -t string db/ail/ail_info "0" -f -s User
+vconftool set -t string db/menuscreen/desktop "0" -f -s User
+vconftool set -t string db/menu_widget/language "en_US.utf8" -f -s User
 
 mkdir -p %{TZ_SYS_RO_DESKTOP_APP}
 mkdir -p %{TZ_SYS_RW_DESKTOP_APP}
