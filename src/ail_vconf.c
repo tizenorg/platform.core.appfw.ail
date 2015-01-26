@@ -29,6 +29,7 @@
 
 #include <vconf.h>
 #include "ail_vconf.h"
+#include "ail_private.h"
 
 #define VCONFTOOL		"/usr/bin/vconftool"
 #define CMD_VCONF_GET_STR	VCONFTOOL " -q get '%s'"
@@ -113,7 +114,7 @@ static int _ail_vconf_exec_(char **readen, const char *cmddef, ...)
 /*
  vconf_get_str with fallback to the command vconftool.
 */
-char *ail_vconf_get_str(const char *keyname)
+EXPORT_API char *ail_vconf_get_str(const char *keyname)
 {
 	char *result;
 	char *data;
@@ -146,7 +147,7 @@ char *ail_vconf_get_str(const char *keyname)
 /*
  vconf_set_str with fallback to the command vconftool.
 */
-int ail_vconf_set_str(const char *keyname, const char *strval)
+EXPORT_API int ail_vconf_set_str(const char *keyname, const char *strval)
 {
 	int result;
 	char *data;

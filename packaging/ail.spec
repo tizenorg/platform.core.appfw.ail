@@ -28,6 +28,16 @@ Requires:       pkgconfig(libsmack)
 %description devel
 Application Information Library Development files package
 
+%package vconf-devel
+Summary:        Application Information Library Development files
+Requires:       libail = %{version}-%{release}
+
+%description vconf-devel
+Application Information Library Development files package
+This developement file purpose concerns the issue TC-2399
+https://bugs.tizen.org/jira/browse/TC-2399
+
+
 %prep
 %setup -q
 cp %{SOURCE1001} .
@@ -119,3 +129,6 @@ fi
 %{_includedir}/ail.h
 %{_libdir}/libail.so
 %{_libdir}/pkgconfig/ail.pc
+
+%files vconf-devel
+%{_includedir}/ail_vconf.h
