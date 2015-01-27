@@ -173,7 +173,6 @@ int main(int argc, char *argv[])
 			_E(" %s is not removed",APP_INFO_DB_FILE);
 		if(remove(APP_INFO_DB_FILE_JOURNAL))
 			_E(" %s is not removed",APP_INFO_DB_FILE_JOURNAL);
-			return -1;
 	}
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);
