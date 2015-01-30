@@ -1134,9 +1134,13 @@ static ail_error_e _load_desktop_info(desktop_info_s* info, uid_t uid)
 	do {
 		ret = db_open(DB_OPEN_RO, uid);
 		if (ret < 0) break;
-//is_admin
-		ret = db_prepare(query, &stmt);
-		//ret = db_prepare_globalro(query, &stmt);
+
+		if (uid != GLOBAL_USER) {
+			ret = db_prepare(query, &stmt);
+		} else {
+			ret = db_prepare_globalro(query, &stmt);
+		}
+
 		if (ret < 0) break;
 
 		ret = db_step(stmt);

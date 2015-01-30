@@ -330,7 +330,7 @@ EXPORT_API ail_error_e ail_get_appinfo(const char *appid, ail_appinfo_h *ai)
 		ret = db_open(DB_OPEN_RO, GLOBAL_USER);
 		if (ret < 0) break;
 //is_admin
-		ret = db_prepare(query, &stmt);
+		ret = db_prepare_globalro(query, &stmt);
 		if (ret < 0) break;
 //		ret = db_prepare(query, &stmt);
 //		if (ret < 0) break;
@@ -483,13 +483,13 @@ char *appinfo_get_localname(const char *package, char *locale, uid_t uid)
 	char *str = NULL;
 	char *localname;
 	char query[512];
-	
+
 	snprintf(query, sizeof(query), QUERY_GET_LOCALNAME, package, locale);
 
-//	_D("Query = %s",query);
-//is_admin
-	retv_if (db_prepare(query, &stmt) < 0, NULL);
-	//retv_if (db_prepare(query, &stmt) < 0, NULL);
+	if (uid != GLOBAL_USER)
+		retv_if (db_prepare(query, &stmt) < 0, NULL);
+	else
+		retv_if (db_prepare_globalro(query, &stmt) < 0, NULL);
 
 	do {
 		if (db_step(stmt) < 0)
