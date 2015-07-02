@@ -1585,8 +1585,6 @@ static ail_error_e _send_db_done_noti(noti_type type, const char *package)
 	retv_if(!noti_string, AIL_ERROR_OUT_OF_MEMORY);
 
 	snprintf(noti_string, size + 1, "%s:%s:%u", type_string, package, getuid());
-	ail_vconf_set_str(VCONFKEY_AIL_INFO_STATE, noti_string);
-	ail_vconf_set_str(VCONFKEY_MENUSCREEN_DESKTOP, noti_string); // duplicate, will be removed
 	_D("Noti : %s", noti_string);
 
 	free(noti_string);
