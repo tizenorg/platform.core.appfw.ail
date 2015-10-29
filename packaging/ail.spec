@@ -68,8 +68,6 @@ useradd -d %TZ_SYS_RW_APP -m %TZ_SYS_GLOBALAPP_USER -r -c "system user for commo
 #cd %%TZ_SYS_RW_APP/
 #ln -s .config/xwalk-service/applications/
 
-vconftool set -t string db/menu_widget/language "en_US.utf8" -f -s User::App::Shared
-
 mkdir -p %{TZ_SYS_RO_DESKTOP_APP}
 mkdir -p %{TZ_SYS_RW_DESKTOP_APP}
 mkdir -p %{TZ_SYS_RW_APP}
