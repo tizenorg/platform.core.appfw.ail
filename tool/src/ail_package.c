@@ -108,20 +108,19 @@ static ail_error_e _get_appinfo(const char *package, const char *property, uid_t
 	ail_error_e ret;
 	int prop, ival;
 	bool bval;
-	char *str;
+	char *str = NULL;;
 	struct element e;
 	struct element *p;
 	int t;
-    //__isadmin)
+
+	/* __is admin */
 	ret = ail_package_get_appinfo(package, &handle);
-	if (ret != AIL_ERROR_OK) {
+	if (ret != AIL_ERROR_OK)
 		return AIL_ERROR_FAIL;
-	}
 
 	prop = _get_property(property);
-	if (prop < 0) {
+	if (prop < 0)
 		goto END;
-	}
 
 	e.prop = prop;
 	p = &e;
@@ -129,29 +128,30 @@ static ail_error_e _get_appinfo(const char *package, const char *property, uid_t
 
 	if (t == VAL_TYPE_STR) {
 		ret = ail_appinfo_get_str(handle, property, &str);
-		if (ret != AIL_ERROR_OK) {
+		if (ret != AIL_ERROR_OK)
 			goto END;
-		}
+
 		fprintf(stderr, "Package[%s], Property[%s] : %s\n", package, property, str);
 	} else if (t == VAL_TYPE_INT) {
 		ret = ail_appinfo_get_int(handle, property, &ival);
-		if (ret != AIL_ERROR_OK) {
+		if (ret != AIL_ERROR_OK)
 			goto END;
-		}
+
 		fprintf(stderr, "Package[%s], Property[%s] : %d\n", package, property, ival);
 	} else if (t == VAL_TYPE_BOOL) {
 		ret = ail_appinfo_get_bool(handle, property, &bval);
-		if (ret != AIL_ERROR_OK) {
+		if (ret != AIL_ERROR_OK)
 			goto END;
-		}
+
 		fprintf(stderr, "Package[%s], Property[%s] : %d\n", package, property, bval);
 	}
 
 END:
+	free(str);
+
 	ret = ail_package_destroy_appinfo(handle);
-	if (ret != AIL_ERROR_OK) {
+	if (ret != AIL_ERROR_OK)
 		return AIL_ERROR_FAIL;
-	}
 
 	return AIL_ERROR_OK;
 }

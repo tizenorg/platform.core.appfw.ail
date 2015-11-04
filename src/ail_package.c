@@ -128,7 +128,7 @@ static char* __convert_syslocale_to_manifest_locale(char *syslocale)
 		return NULL;
 	}
 
-	sprintf(locale, "%c%c_%c%c", syslocale[0], syslocale[1], toupper(syslocale[3]), toupper(syslocale[4]));
+	snprintf(locale, 6, "%c%c_%c%c", syslocale[0], syslocale[1], toupper(syslocale[3]), toupper(syslocale[4]));
 	return locale;
 }
 
@@ -296,7 +296,6 @@ EXPORT_API ail_error_e ail_destroy_appinfo(ail_appinfo_h ai)
 	return AIL_ERROR_OK;
 }
 
-
 EXPORT_API ail_error_e ail_package_get_appinfo(const char *package, ail_appinfo_h *ai)
 {
 	return ail_get_appinfo(package, ai);
@@ -307,14 +306,13 @@ EXPORT_API ail_error_e ail_package_get_usr_appinfo(const char *package, uid_t ui
 	return ail_get_usr_appinfo(package, uid, ai);
 }
 
-
-
 EXPORT_API ail_error_e ail_get_appinfo(const char *appid, ail_appinfo_h *ai)
 {
 	ail_error_e ret;
 	char query[AIL_SQL_QUERY_MAX_LEN];
 	sqlite3_stmt *stmt = NULL;
 	char w[AIL_SQL_QUERY_MAX_LEN];
+	const char *filter;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!ai, AIL_ERROR_INVALID_PARAMETER);
@@ -322,19 +320,25 @@ EXPORT_API ail_error_e ail_get_appinfo(const char *appid, ail_appinfo_h *ai)
 	*ai = appinfo_create();
 	retv_if(!*ai, AIL_ERROR_OUT_OF_MEMORY);
 
-	snprintf(w, sizeof(w), sql_get_filter(E_AIL_PROP_X_SLP_APPID_STR), appid);
+	filter = sql_get_filter(E_AIL_PROP_X_SLP_APPID_STR);
+	if (filter == NULL) {
+		appinfo_destroy(*ai);
+		return AIL_ERROR_FAIL;
+	}
 
-	snprintf(query, sizeof(query), "SELECT %s FROM %s WHERE %s",SQL_FLD_APP_INFO, SQL_TBL_APP_INFO, w);
+	snprintf(w, sizeof(w), filter, appid);
+	snprintf(query, sizeof(query), "SELECT %s FROM %s WHERE %s",
+					SQL_FLD_APP_INFO, SQL_TBL_APP_INFO, w);
 
 	do {
 		ret = db_open(DB_OPEN_RO, GLOBAL_USER);
-		if (ret < 0) break;
-//is_admin
-		ret = db_prepare_globalro(query, &stmt);
-		if (ret < 0) break;
-//		ret = db_prepare(query, &stmt);
-//		if (ret < 0) break;
+		if (ret < 0)
+			break;
 
+		/* is_admin */
+		ret = db_prepare_globalro(query, &stmt);
+		if (ret < 0)
+			break;
 
 		ret = db_step(stmt);
 		if (ret < 0) {
@@ -357,11 +361,13 @@ EXPORT_API ail_error_e ail_get_appinfo(const char *appid, ail_appinfo_h *ai)
 		}
 
 		ret = db_finalize((*ai)->stmt);
-		if (ret < 0) break;
+		if (ret < 0)
+			break;
+
 		(*ai)->stmt = NULL;
 
 		return AIL_ERROR_OK;
-	} while(0);
+	} while (0);
 
 	appinfo_destroy(*ai);
 
@@ -374,6 +380,7 @@ EXPORT_API ail_error_e ail_get_usr_appinfo(const char *appid, uid_t uid, ail_app
 	char query[AIL_SQL_QUERY_MAX_LEN];
 	sqlite3_stmt *stmt = NULL;
 	char w[AIL_SQL_QUERY_MAX_LEN];
+	const char *filter;
 
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!ai, AIL_ERROR_INVALID_PARAMETER);
@@ -381,19 +388,25 @@ EXPORT_API ail_error_e ail_get_usr_appinfo(const char *appid, uid_t uid, ail_app
 	*ai = appinfo_create();
 	retv_if(!*ai, AIL_ERROR_OUT_OF_MEMORY);
 
-	snprintf(w, sizeof(w), sql_get_filter(E_AIL_PROP_X_SLP_APPID_STR), appid);
+	filter = sql_get_filter(E_AIL_PROP_X_SLP_APPID_STR);
+	if (filter == NULL) {
+		appinfo_destroy(*ai);
+		return AIL_ERROR_FAIL;
+	}
 
-	snprintf(query, sizeof(query), "SELECT %s FROM %s WHERE %s",SQL_FLD_APP_INFO, SQL_TBL_APP_INFO, w);
+	snprintf(w, sizeof(w), filter, appid);
+	snprintf(query, sizeof(query), "SELECT %s FROM %s WHERE %s",
+					SQL_FLD_APP_INFO, SQL_TBL_APP_INFO, w);
 
 	do {
 		ret = db_open(DB_OPEN_RO, uid);
-		if (ret < 0) break;
-//is_admin
-		ret = db_prepare(query, &stmt);
-		if (ret < 0) break;
-//		ret = db_prepare(query, &stmt);
-//		if (ret < 0) break;
+		if (ret < 0)
+			break;
 
+		/* is_admin */
+		ret = db_prepare(query, &stmt);
+		if (ret < 0)
+			break;
 
 		ret = db_step(stmt);
 		if (ret < 0) {
@@ -416,16 +429,19 @@ EXPORT_API ail_error_e ail_get_usr_appinfo(const char *appid, uid_t uid, ail_app
 		}
 
 		ret = db_finalize((*ai)->stmt);
-		if (ret < 0) break;
+		if (ret < 0)
+			break;
+
 		(*ai)->stmt = NULL;
 
 		return AIL_ERROR_OK;
-	} while(0);
+	} while (0);
 
 	appinfo_destroy(*ai);
 
 	return ret;
 }
+
 EXPORT_API ail_error_e ail_appinfo_get_bool(const ail_appinfo_h ai, const char *property, bool *value)
 {
 	ail_prop_bool_e prop;
@@ -439,7 +455,7 @@ EXPORT_API ail_error_e ail_appinfo_get_bool(const ail_appinfo_h ai, const char *
 
 	if (prop < E_AIL_PROP_BOOL_MIN || prop > E_AIL_PROP_BOOL_MAX)
 		return AIL_ERROR_INVALID_PARAMETER;
-	
+
 	if (ai->stmt) {
 		int index;
 		index = sql_get_app_info_idx(prop);
@@ -466,7 +482,7 @@ EXPORT_API ail_error_e ail_appinfo_get_int(const ail_appinfo_h ai, const char *p
 		return AIL_ERROR_INVALID_PARAMETER;
 
 	if (ai->stmt) {
-		int index; 
+		int index;
 		index = sql_get_app_info_idx(prop);
 		if (db_column_int(ai->stmt, index, value) < 0)
 			return AIL_ERROR_DB_FAILED;

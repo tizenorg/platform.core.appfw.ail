@@ -176,9 +176,12 @@ static void _get_condition(gpointer data, char **condition)
 	struct element *e = (struct element *)data;
 	const char *f;
 	char buf[AIL_SQL_QUERY_MAX_LEN];
+	int t;
 
 	f =  sql_get_filter(e->prop);
-	int t;
+	if (f == NULL)
+		return;
+
 	ELEMENT_TYPE(e, t);
 
 	switch (t) {
@@ -213,7 +216,7 @@ char *_get_where_clause(ail_filter_h filter)
 	c = NULL;
 
 	GSList *l;
-	
+
 	snprintf(w, AIL_SQL_QUERY_MAX_LEN, " WHERE ");
 
 	for (l = filter->list; l; l = g_slist_next(l)) {
@@ -285,6 +288,11 @@ EXPORT_API ail_error_e ail_filter_count_appinfo(ail_filter_h filter, int *cnt)
 		return AIL_ERROR_DB_FAILED;
 	}
 	ai = appinfo_create();
+	if (ai == NULL) {
+		_E("out of memory");
+		db_finalize(stmt);
+		return AIL_ERROR_FAIL;
+	}
 
 	appinfo_set_stmt(ai, stmt);
 	while (db_step(stmt) == AIL_ERROR_OK) {
@@ -351,7 +359,13 @@ EXPORT_API ail_error_e ail_filter_count_usr_appinfo(ail_filter_h filter, int *cn
 		_E("db_prepare fail for query = %s",q);
 		return AIL_ERROR_DB_FAILED;
 	}
+
 	ai = appinfo_create();
+	if (ai == NULL) {
+		_E("Failed to create appinfo");
+		db_finalize(stmt);
+		return AIL_ERROR_OUT_OF_MEMORY;
+	}
 
 	appinfo_set_stmt(ai, stmt);
 	while (db_step(stmt) == AIL_ERROR_OK) {
@@ -423,6 +437,11 @@ EXPORT_API ail_error_e ail_filter_list_appinfo_foreach(ail_filter_h filter, ail_
 		return AIL_ERROR_DB_FAILED;
 	}*/
 	ai = appinfo_create();
+	if (ai == NULL) {
+		_E("out of memory");
+		db_finalize(stmt);
+		return AIL_ERROR_FAIL;
+	}
 
 	appinfo_set_stmt(ai, stmt);
 	uint i = 0;
@@ -487,7 +506,14 @@ EXPORT_API ail_error_e ail_filter_list_usr_appinfo_foreach(ail_filter_h filter, 
 		_E("db_prepare fail for query = %s",q);
 		return AIL_ERROR_DB_FAILED;
 	}
+
 	ai = appinfo_create();
+	if (ai == NULL) {
+		_E("Failed to create appinfo");
+		db_finalize(stmt);
+		return AIL_ERROR_DB_FAILED;
+	}
+
 	appinfo_set_stmt(ai, stmt);
 	uint i = 0;
 	while (i = db_step(stmt) == AIL_ERROR_OK) {
@@ -498,8 +524,9 @@ EXPORT_API ail_error_e ail_filter_list_usr_appinfo_foreach(ail_filter_h filter, 
 		if (AIL_CB_RET_CANCEL == r)
 			break;
 	}
-	appinfo_destroy(ai);
 
+	appinfo_destroy(ai);
 	db_finalize(stmt);
+
 	return AIL_ERROR_OK;
 }

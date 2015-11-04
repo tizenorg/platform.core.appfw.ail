@@ -21,8 +21,6 @@
  *
  */
 
-
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -35,7 +33,6 @@
 #include "ail.h"
 #include "ail_db.h"
 #include "ail_private.h"
-
 
 #ifdef _E
 #undef _E
@@ -78,11 +75,10 @@ static int syncdb_user_count_app(void)
 	return total;
 }
 
-
-
 char* _desktop_to_package(const char* desktop)
 {
-	char *package, *tmp;
+	char *package;
+	char *tmp;
 
 	retv_if(!desktop, NULL);
 
@@ -118,7 +114,7 @@ int syncdb_user_load_directory(const char *directory)
 	int total_cnt = 0;
 	int ok_cnt = 0;
 
-	// desktop file
+	/*  desktop file */
 	dir = opendir(directory);
 	if (!dir) {
 		if (strerror_r(errno, buf, sizeof(buf)) == 0)
@@ -159,7 +155,6 @@ int syncdb_user_load_directory(const char *directory)
 static int __is_authorized()
 {
 	/* ail_init db should be called by an user. */
-
 	uid_t uid = getuid();
 	if ((uid_t) OWNER_ROOT != uid)
 		return 1;
@@ -167,35 +162,51 @@ static int __is_authorized()
 		return 0;
 }
 
-
 int main(int argc, char *argv[])
 {
 	int ret;
+	char *db;
+	char *path;
 
 	if (!__is_authorized()) {
 		fprintf(stderr, "You are not an authorized user!\n");
 		_D("You are root user! Please switch to a regular user\n");
 		return -1;
 	}
-	if (access(ail_get_app_DB(getuid()), F_OK)) {
-		fprintf(stderr, "Application database is missing, please use ail_createdb to create one before\n");
-		return AIL_ERROR_FAIL;
-	}
-	ret = setenv("AIL_INITDB", "1", 1);
-	_D("AIL_INITDB : %d", ret);
-	ret = syncdb_user_count_app();
-	if (ret > 0) {
-		_D("Some Apps in the App Info DB.");
+
+	db = ail_get_app_DB(getuid());
+	if (db == NULL) {
+		fprintf(stderr, "Failed to get DB");
+		_E("Failed to get DB");
+		return -1;
 	}
 
-	ret = syncdb_user_load_directory(ail_get_desktop_path(getuid()));
-	if (ret == AIL_ERROR_FAIL) {
-		_E("cannot load usr desktop directory.");
+	if (access(db, F_OK)) {
+		fprintf(stderr, "Application database is missing, please use ail_createdb to create one before\n");
+		free(db);
+		return AIL_ERROR_FAIL;
 	}
+
+	ret = setenv("AIL_INITDB", "1", 1);
+	_D("AIL_INITDB : %d", ret);
+
+	ret = syncdb_user_count_app();
+	if (ret > 0)
+		_D("Some Apps in the App Info DB.");
+
+	path = ail_get_desktop_path(getuid());
+	if (path == NULL) {
+		_E("Failed to get desktop path");
+		free(db);
+		return AIL_ERROR_FAIL;
+	}
+
+	ret = syncdb_user_load_directory(path);
+	if (ret == AIL_ERROR_FAIL)
+		_E("cannot load usr desktop directory.");
+
+	free(path);
+	free(db);
 
 	return AIL_ERROR_OK;
 }
-
-
-
-// END

@@ -43,65 +43,102 @@
 #define QUERY_CREATE_VIEW_LOCAL "CREATE temp VIEW localname as select distinct * from (select  * from main.localname m union select * from Global.localname g)"
 
 #define SET_SMACK_LABEL(x,uid) \
-	if(smack_setlabel((x), (((uid) == GLOBAL_USER)?"*":"User"), SMACK_LABEL_ACCESS)) _E("failed chsmack -a \"User/*\" %s", x); \
-	else _D("chsmack -a \"User/*\" %s", x);
-	
-	
-#define retv_with_dbmsg_if(expr, val) do { \
-	if (expr) { \
-		_E("db_info.dbUserro: %s", sqlite3_errmsg(db_info.dbUserro)); \
-		_E("db_info.dbGlobalro: %s", sqlite3_errmsg(db_info.dbGlobalro)); \
-		_E("db_info.dbUserrw: %s", sqlite3_errmsg(db_info.dbUserrw)); \
-		_E("db_info.dbGlobalrw: %s", sqlite3_errmsg(db_info.dbGlobalrw)); \
-		_E("db_info.dbUserro errcode: %d", sqlite3_extended_errcode(db_info.dbUserro)); \
-		_E("db_info.dbGlobalro errcode: %d", sqlite3_extended_errcode(db_info.dbGlobalro)); \
-		_E("db_info.dbUserrw errcode: %d", sqlite3_extended_errcode(db_info.dbUserrw)); \
-		_E("db_info.dbGlobalrw errcode: %d", sqlite3_extended_errcode(db_info.dbGlobalrw)); \
-		return (val); \
-	} \
-} while (0)
+	do { \
+		if (smack_setlabel((x), (((uid) == GLOBAL_USER) ? "*" : "User"), SMACK_LABEL_ACCESS)) \
+			_E("failed chsmack -a \"User/*\" %s", x); \
+		else \
+			_D("chsmack -a \"User/*\" %s", x); \
+	} while (0)
+
+#define retv_with_dbmsg_if(expr, val) \
+	do { \
+		if (expr) { \
+			_E("db_info.dbUserro: %s", sqlite3_errmsg(db_info.dbUserro)); \
+			_E("db_info.dbGlobalro: %s", sqlite3_errmsg(db_info.dbGlobalro)); \
+			_E("db_info.dbUserrw: %s", sqlite3_errmsg(db_info.dbUserrw)); \
+			_E("db_info.dbGlobalrw: %s", sqlite3_errmsg(db_info.dbGlobalrw)); \
+			_E("db_info.dbUserro errcode: %d", sqlite3_extended_errcode(db_info.dbUserro)); \
+			_E("db_info.dbGlobalro errcode: %d", sqlite3_extended_errcode(db_info.dbGlobalro)); \
+			_E("db_info.dbUserrw errcode: %d", sqlite3_extended_errcode(db_info.dbUserrw)); \
+			_E("db_info.dbGlobalrw errcode: %d", sqlite3_extended_errcode(db_info.dbGlobalrw)); \
+			return (val); \
+		} \
+	} while (0)
+
+#define tryvm_with_dbmsg_if(expr, val) \
+	do { \
+		if (expr) { \
+			_E("db_info.dbUserro: %s", sqlite3_errmsg(db_info.dbUserro)); \
+			_E("db_info.dbGlobalro: %s", sqlite3_errmsg(db_info.dbGlobalro)); \
+			_E("db_info.dbUserrw: %s", sqlite3_errmsg(db_info.dbUserrw)); \
+			_E("db_info.dbGlobalrw: %s", sqlite3_errmsg(db_info.dbGlobalrw)); \
+			_E("db_info.dbUserro errcode: %d", sqlite3_extended_errcode(db_info.dbUserro)); \
+			_E("db_info.dbGlobalro errcode: %d", sqlite3_extended_errcode(db_info.dbGlobalro)); \
+			_E("db_info.dbUserrw errcode: %d", sqlite3_extended_errcode(db_info.dbUserrw)); \
+			_E("db_info.dbGlobalrw errcode: %d", sqlite3_extended_errcode(db_info.dbGlobalrw)); \
+			goto catch; \
+		} \
+	} while (0)
 
 static __thread struct {
-        sqlite3         *dbUserro;
-        sqlite3         *dbGlobalro;
-        sqlite3         *dbUserrw;
-        sqlite3         *dbGlobalrw;
+	sqlite3 *dbUserro;
+        sqlite3 *dbGlobalro;
+        sqlite3 *dbUserrw;
+        sqlite3 *dbGlobalrw;
 } db_info = {
-        .dbUserro = NULL,
-        .dbGlobalro = NULL,
-        .dbUserrw = NULL,
-        .dbGlobalrw = NULL
+	.dbUserro = NULL,
+	.dbGlobalro = NULL,
+	.dbUserrw = NULL,
+	.dbGlobalrw = NULL
 };
-  static __thread      sqlite3         *dbInit = NULL;
+
+static __thread sqlite3 *dbInit = NULL;
 
 static int ail_db_change_perm(const char *db_file, uid_t uid)
 {
 	char buf[BUFSIZE];
 	char journal_file[BUFSIZE];
 	char *files[3];
-	int ret, i;
+	int ret;
+	int i;
+	struct passwd pwd;
 	struct passwd *userinfo = NULL;
+	char *pwd_buf = NULL;
+	int pwd_bufsize;
+
 	files[0] = (char *)db_file;
 	files[1] = journal_file;
 	files[2] = NULL;
 
 	retv_if(!db_file, AIL_ERROR_FAIL);
-	if(getuid() != OWNER_ROOT) //At this time we should be root to apply this
-			return AIL_ERROR_OK;
-    userinfo = getpwuid(uid);
-    if (!userinfo) {
+	if (getuid() != OWNER_ROOT) /* At this time we should be root to apply this */
+		return AIL_ERROR_OK;
+
+	pwd_bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
+	if (pwd_bufsize <= 0)
+		pwd_bufsize = 16384;
+
+	pwd_buf = (char *)malloc(pwd_bufsize);
+	if (pwd_buf == NULL) {
+		_E("out of memory");
+		return AIL_ERROR_OUT_OF_MEMORY;
+	}
+
+	if (getpwuid_r(uid, &pwd, pwd_buf, pwd_bufsize, &userinfo) != 0) {
 		_E("FAIL: user %d doesn't exist", uid);
+		free(pwd_buf);
 		return AIL_ERROR_FAIL;
 	}
 	snprintf(journal_file, sizeof(journal_file), "%s%s", db_file, "-journal");
 
 	for (i = 0; files[i]; i++) {
-		// Compare git_t type and not group name
+		/* Compare git_t type and not group name */
 		ret = chown(files[i], uid, userinfo->pw_gid);
-		SET_SMACK_LABEL(files[i],uid)
+		SET_SMACK_LABEL(files[i],uid);
 		if (ret == -1) {
 			strerror_r(errno, buf, sizeof(buf));
 			_E("FAIL : chown %s %d.%d, because %s", db_file, uid, userinfo->pw_gid, buf);
+			free(pwd_buf);
 			return AIL_ERROR_FAIL;
 		}
 
@@ -109,164 +146,307 @@ static int ail_db_change_perm(const char *db_file, uid_t uid)
 		if (ret == -1) {
 			strerror_r(errno, buf, sizeof(buf));
 			_E("FAIL : chmod %s 0664, because %s", db_file, buf);
+			free(pwd_buf);
 			return AIL_ERROR_FAIL;
 		}
 	}
 
+	free(pwd_buf);
+
 	return AIL_ERROR_OK;
 }
 
-char* ail_get_icon_path(uid_t uid)
+char *ail_get_icon_path(uid_t uid)
 {
 	char *result = NULL;
+	struct group grpbuf;
 	struct group *grpinfo = NULL;
 	char *dir = NULL;
-	struct passwd *userinfo = getpwuid(uid);
+	struct passwd pwd;
+	struct passwd *userinfo = NULL;
+	int buflen;
+	char *buf = NULL;
+	char *pwd_buf;
 
 	if (uid == 0) {
 		_E("FAIL : Root is not allowed user! please fix it replacing with DEFAULT_USER");
 		return NULL;
 	}
+
 	if (uid != GLOBAL_USER) {
-		if (userinfo == NULL) {
+		buflen = sysconf(_SC_GETPW_R_SIZE_MAX);
+		if (buflen <= 0)
+			buflen = 16384;
+
+		pwd_buf = (char *)malloc(buflen);
+		if (pwd_buf == NULL) {
+			_E("out of memory");
+			return NULL;
+		}
+
+		if (getpwuid_r(uid, &pwd, pwd_buf, buflen, &userinfo) != 0) {
 			_E("getpwuid(%d) returns NULL !", uid);
+			free(pwd_buf);
 			return NULL;
 		}
-		grpinfo = getgrnam("users");
-		if (grpinfo == NULL) {
-			_E("getgrnam(users) returns NULL !");
+
+		buflen = sysconf(_SC_GETGR_R_SIZE_MAX);
+		if (buflen <= 0)
+			buflen = 1024;
+
+		buf = (char *)malloc(buflen);
+		if (buf == NULL) {
+			_E("out of memory");
+			free(pwd_buf);
 			return NULL;
 		}
-		// Compare git_t type and not group name
+
+		if (getgrnam_r("users", &grpbuf, buf, buflen, &grpinfo) != 0) {
+			_E("getgrnam_r(users) returns NULL !");
+			free(pwd_buf);
+			free(buf);
+			return NULL;
+		}
+
+		/* Compare git_t type and not group name */
 		if (grpinfo->gr_gid != userinfo->pw_gid) {
 			_E("UID [%d] does not belong to 'users' group!", uid);
+			free(pwd_buf);
+			free(buf);
 			return NULL;
 		}
+
 		asprintf(&result, "%s/.applications/icons/", userinfo->pw_dir);
+		free(pwd_buf);
 	} else {
-		result = tzplatform_mkpath(TZ_SYS_RW_ICONS, "/");
+		result = strdup(tzplatform_mkpath(TZ_SYS_RW_ICONS, "/"));
+		if (result == NULL) {
+			_E("out of memory");
+			return NULL;
+		}
 	}
+
 	int ret = mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
 	if (ret == -1 && errno != EEXIST) {
 		_E("FAIL : to create directory %s %d", result, errno);
 	} else if (getuid() == OWNER_ROOT) {
-		ret = chown(result, uid, ((grpinfo)?grpinfo->gr_gid:0));
-		SET_SMACK_LABEL(result,uid)
+		ret = chown(result, uid, grpinfo ? grpinfo->gr_gid : 0);
+		SET_SMACK_LABEL(result, uid);
 		if (ret == -1) {
 			char buf[BUFSIZE];
 			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", result, uid, ((grpinfo)?grpinfo->gr_gid:0), buf);
+			_E("FAIL : chown %s %d.%d, because %s", result, uid,
+					grpinfo ? grpinfo->gr_gid : 0, buf);
 		}
 	}
+
+	free(buf);
+
 	return result;
 }
 
-char* ail_get_app_DB_journal(uid_t uid)
+char *ail_get_app_DB_journal(uid_t uid)
 {
-
 	char *app_path = ail_get_app_DB(uid);
-	char* result = NULL;
+	char *result = NULL;
 
 	asprintf(&result, "%s-journal", app_path);
+	free(app_path);
+
 	return  result;
 }
 
-char* ail_get_app_DB(uid_t uid)
+char *ail_get_app_DB(uid_t uid)
 {
 	char *result = NULL;
+	struct group grpbuf;
 	struct group *grpinfo = NULL;
 	char *dir = NULL;
-	struct passwd *userinfo = getpwuid(uid);
+	char *temp = NULL;
+	struct passwd pwd;
+	struct passwd *userinfo;
+	int buflen;
+	char *buf = NULL;
+	char *pwd_buf;
 
 	if (uid == 0) {
 		_E("FAIL : Root is not allowed! switch to DEFAULT_USER");
 		return NULL;
 	}
+
 	if (uid != GLOBAL_USER) {
-		if (userinfo == NULL) {
+		buflen = sysconf(_SC_GETPW_R_SIZE_MAX);
+		if (buflen <= 0)
+			buflen = 16384;
+
+		pwd_buf = (char *)malloc(buflen);
+		if (pwd_buf == NULL) {
+			_E("out of memory");
+			return NULL;
+		}
+
+		if (getpwuid_r(uid, &pwd, pwd_buf, buflen, &userinfo) != 0) {
 			_E("getpwuid(%d) returns NULL !", uid);
+			free(pwd_buf);
 			return NULL;
 		}
-		grpinfo = getgrnam("users");
-		if (grpinfo == NULL) {
+
+		buflen = sysconf(_SC_GETGR_R_SIZE_MAX);
+		if (buflen <= 0)
+			buflen = 1024;
+
+		buf = (char *)malloc(buflen);
+		if (buf == NULL) {
+			_E("out of memory");
+			free(pwd_buf);
+			return NULL;
+		}
+
+		if (getgrnam_r("users", &grpbuf, buf, buflen, &grpinfo) != 0) {
 			_E("getgrnam(users) returns NULL !");
+			free(pwd_buf);
+			free(buf);
 			return NULL;
 		}
-		// Compare git_t type and not group name
+
+		/* Compare git_t type and not group name */
 		if (grpinfo->gr_gid != userinfo->pw_gid) {
 			_E("UID [%d] does not belong to 'users' group!", uid);
+			free(pwd_buf);
+			free(buf);
 			return NULL;
 		}
+
 		asprintf(&result, "%s/.applications/dbspace/.app_info.db", userinfo->pw_dir);
+		free(pwd_buf);
 	} else {
-			result = strdup(APP_INFO_DB_FILE);
+		result = strdup(APP_INFO_DB_FILE);
+		if (result == NULL) {
+			_E("ouf of memory");
+			return NULL;
+		}
 	}
-	char *temp = strdup(result);
+
+	temp = strdup(result);
+	if (temp == NULL) {
+		free(buf);
+		return result;
+	}
+
 	dir = strrchr(temp, '/');
-	if(!dir)
-	{
+	if (!dir) {
 		free(temp);
+		free(buf);
 		return result;
 	}
 	*dir = 0;
-		int ret = mkdir(temp, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-		if (ret == -1 && errno != EEXIST) {
-			_E("FAIL : to create directory %s %d", temp, errno);
-		} else if (getuid() == OWNER_ROOT) {
-			ret = chown(temp, uid, ((grpinfo)?grpinfo->gr_gid:0));
-			SET_SMACK_LABEL(temp,uid)
-			if (ret == -1) {
-				char buf[BUFSIZE];
-				strerror_r(errno, buf, sizeof(buf));
-				_E("FAIL : chown %s %d.%d, because %s", temp, uid, ((grpinfo)?grpinfo->gr_gid:0), buf);
-			}
+
+	int ret = mkdir(temp, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+	if (ret == -1 && errno != EEXIST) {
+		_E("FAIL : to create directory %s %d", temp, errno);
+	} else if (getuid() == OWNER_ROOT) {
+		ret = chown(temp, uid, grpinfo ? grpinfo->gr_gid : 0);
+		SET_SMACK_LABEL(temp,uid);
+		if (ret == -1) {
+			char buf[BUFSIZE];
+			strerror_r(errno, buf, sizeof(buf));
+			_E("FAIL : chown %s %d.%d, because %s", temp, uid,
+					grpinfo ? grpinfo->gr_gid : 0, buf);
 		}
+	}
+
 	free(temp);
+	free(buf);
+
 	return result;
 }
 
-char* ail_get_desktop_path(uid_t uid)
+char *ail_get_desktop_path(uid_t uid)
 {
 	char *result = NULL;
+	struct group grpbuf;
 	struct group *grpinfo = NULL;
 	char *dir = NULL;
-	struct passwd *userinfo = getpwuid(uid);
+	struct passwd pwd;
+	struct passwd *userinfo = NULL;
+	int buflen;
+	char *buf = NULL;
+	char *pwd_buf;
 
 	if (uid == 0) {
 		_E("FAIL : Root is not allowed user! please fix it replacing with DEFAULT_USER");
 		return NULL;
 	}
+
 	if (uid != GLOBAL_USER) {
-		if (userinfo == NULL) {
+		buflen = sysconf(_SC_GETPW_R_SIZE_MAX);
+		if (buflen <= 0)
+			buflen = 16384;
+
+		pwd_buf = (char *)malloc(buflen);
+		if (pwd_buf == NULL) {
+			_E("out of memory");
+			return NULL;
+		}
+
+		if (getpwuid_r(uid, &pwd, pwd_buf, buflen, &userinfo) != 0) {
 			_E("getpwuid(%d) returns NULL !", uid);
+			free(pwd_buf);
 			return NULL;
 		}
-		grpinfo = getgrnam("users");
-		if (grpinfo == NULL) {
+
+		buflen = sysconf(_SC_GETGR_R_SIZE_MAX);
+		if (buflen <= 0)
+			buflen = 1024;
+
+		buf = (char *)malloc(buflen);
+		if (buf == NULL) {
+			_E("out of memory");
+			free(pwd_buf);
+			return NULL;
+		}
+
+		if (getgrnam_r("users", &grpbuf, buf, buflen, &grpinfo) != 0) {
 			_E("getgrnam(users) returns NULL !");
+			free(pwd_buf);
+			free(buf);
 			return NULL;
 		}
-		// Compare git_t type and not group name
+
+		/* Compare git_t type and not group name */
 		if (grpinfo->gr_gid != userinfo->pw_gid) {
 			_E("UID [%d] does not belong to 'users' group!", uid);
+			free(pwd_buf);
+			free(buf);
 			return NULL;
 		}
+
 		asprintf(&result, "%s/.applications/desktop/", userinfo->pw_dir);
+		free(pwd_buf);
 	} else {
-		result = tzplatform_mkpath(TZ_SYS_RW_DESKTOP_APP, "/");
-	}
-		int ret = mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
-		if (ret == -1 && errno != EEXIST) {
-			_E("FAIL : to create directory %s %d", result, errno);
-		} else if (getuid() == OWNER_ROOT) {
-			ret = chown(result, uid, ((grpinfo)?grpinfo->gr_gid:0));
-			SET_SMACK_LABEL(result,uid)
-			if (ret == -1) {
-				char buf[BUFSIZE];
-				strerror_r(errno, buf, sizeof(buf));
-				_E("FAIL : chown %s %d.%d, because %s", result, uid, ((grpinfo)?grpinfo->gr_gid:0), buf);
-			}
+		result = strdup(tzplatform_mkpath(TZ_SYS_RW_DESKTOP_APP, "/"));
+		if (result == NULL) {
+			_E("out of memory");
+			return NULL;
 		}
+	}
+
+	int ret = mkdir(result, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH);
+	if (ret == -1 && errno != EEXIST) {
+		_E("FAIL : to create directory %s %d", result, errno);
+	} else if (getuid() == OWNER_ROOT) {
+		ret = chown(result, uid, grpinfo ? grpinfo->gr_gid : 0);
+		SET_SMACK_LABEL(result,uid);
+		if (ret == -1) {
+			char buf[BUFSIZE];
+			strerror_r(errno, buf, sizeof(buf));
+			_E("FAIL : chown %s %d.%d, because %s", result, uid,
+					grpinfo ? grpinfo->gr_gid : 0, buf);
+		}
+	}
+
+	free(buf);
+
 	return result;
 }
 
@@ -292,6 +472,8 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 	int ret;
 	int changed = 0;
 	int i;
+	char *db;
+	char *global_db;
 	const char *tbls[3] = {
 		"CREATE TABLE app_info "
 		"(package TEXT PRIMARY KEY, "
@@ -332,15 +514,26 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 		NULL
 	};
 
-	char *db = ail_get_app_DB(uid);
-	char *global_db = ail_get_app_DB(GLOBAL_USER);
+	db = ail_get_app_DB(uid);
+	if (db == NULL) {
+		_E("Failed to get app DB");
+		return AIL_ERROR_DB_FAILED;
+	}
+
+	global_db = ail_get_app_DB(GLOBAL_USER);
+	if (global_db == NULL) {
+		_E("Failed to get global app DB");
+		free(db);
+		return AIL_ERROR_DB_FAILED;
+	}
 
 	if (access(db, F_OK)) {
 		if (AIL_ERROR_OK == db_util_open_with_options(db, &dbInit, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL))
 		{
 			for (i = 0; tbls[i] != NULL; i++) {
 				ret = do_db_exec(tbls[i], dbInit);
-				retv_if(ret != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
+				if (ret != AIL_ERROR_OK)
+					goto catch;
 			}
 			if(getuid() == OWNER_ROOT && AIL_ERROR_OK != ail_db_change_perm(db, uid)) {
 				_E("Failed to change permission\n");
@@ -350,9 +543,10 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 			_E("Failed to create table %s\n", db);
 		}
 	}
-	if(dbInit) {
+
+	if (dbInit) {
 		ret = sqlite3_close(dbInit);
-		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+		tryvm_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 		dbInit = NULL;
 	}
 	if(mode & DB_OPEN_RO) {
@@ -364,39 +558,41 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 				char query_view_local[AIL_SQL_QUERY_MAX_LEN];
 				snprintf(query_attach, AIL_SQL_QUERY_MAX_LEN, QUERY_ATTACH, global_db);
 				if (db_exec_usr_ro(query_attach) < 0) {
-					_D("executing query_attach : %s", query_attach );
-					goto error;
+					_D("executing query_attach : %s", query_attach);
+					goto catch;
 				}
 				snprintf(query_view_app, AIL_SQL_QUERY_MAX_LEN, QUERY_CREATE_VIEW_APP);
 				if (db_exec_usr_ro(query_view_app) < 0) {
-					_D("executing query_attach : %s", query_view_app );
-					goto error;
+					_D("executing query_attach : %s", query_view_app);
+					goto catch;
 				}
 
 				snprintf(query_view_local, AIL_SQL_QUERY_MAX_LEN, QUERY_CREATE_VIEW_LOCAL);
 				if (db_exec_usr_ro(query_view_local) < 0) {
-					_D("executing query_attach : %s", query_view_local );
-					goto error;
+					_D("executing query_attach : %s", query_view_local);
+					goto catch;
 				}
 			}
 		} else {
 			if (!db_info.dbGlobalro) {
 				ret = db_util_open_with_options(global_db, &db_info.dbGlobalro, SQLITE_OPEN_READONLY, NULL);
-				retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
+				tryvm_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 			}
 		}
 	}
-	if(mode & DB_OPEN_RW) {
-		if(uid != GLOBAL_USER) {
-			if(!db_info.dbUserrw){
+
+	if (mode & DB_OPEN_RW) {
+		if (uid != GLOBAL_USER) {
+			if (!db_info.dbUserrw) {
 				ret = db_util_open(db, &db_info.dbUserrw, 0);
+				tryvm_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 			}
 		} else {
-			if(!db_info.dbGlobalrw){
+			if (!db_info.dbGlobalrw) {
 				ret = db_util_open(global_db, &db_info.dbGlobalrw, 0);
+				tryvm_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 			}
 		}
-		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 	}
 
 	free(global_db);
@@ -404,13 +600,12 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 
 	return AIL_ERROR_OK;
 
-error:
+catch:
 	free(global_db);
 	free(db);
 
 	return AIL_ERROR_DB_FAILED;
 }
-
 
 ail_error_e db_prepare(const char *query, sqlite3_stmt **stmt)
 {
@@ -427,12 +622,10 @@ ail_error_e db_prepare_rw(const char *query, sqlite3_stmt **stmt)
 	return db_do_prepare(db_info.dbUserrw, query, stmt);
 }
 
-
 ail_error_e db_prepare_globalrw(const char *query, sqlite3_stmt **stmt)
 {
 	return db_do_prepare(db_info.dbGlobalrw, query, stmt);
 }
-
 
 ail_error_e db_bind_bool(sqlite3_stmt *stmt, int idx, bool value)
 {
@@ -445,8 +638,6 @@ ail_error_e db_bind_bool(sqlite3_stmt *stmt, int idx, bool value)
 
 	return AIL_ERROR_OK;
 }
-
-
 
 ail_error_e db_bind_int(sqlite3_stmt *stmt, int idx, int value)
 {
@@ -472,7 +663,6 @@ ail_error_e db_bind_text(sqlite3_stmt *stmt, int idx, char* value)
 	return AIL_ERROR_OK;
 }
 
-
 ail_error_e db_step(sqlite3_stmt *stmt)
 {
 	int ret;
@@ -490,8 +680,6 @@ ail_error_e db_step(sqlite3_stmt *stmt)
 	retv_with_dbmsg_if(1, AIL_ERROR_DB_FAILED);
 }
 
-
-
 ail_error_e db_column_bool(sqlite3_stmt *stmt, int index, bool *value)
 {
 	int out_val;
@@ -505,8 +693,6 @@ ail_error_e db_column_bool(sqlite3_stmt *stmt, int index, bool *value)
 	return AIL_ERROR_OK;
 }
 
-
-
 ail_error_e db_column_int(sqlite3_stmt *stmt, int index, int *value)
 {
 	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
@@ -517,8 +703,6 @@ ail_error_e db_column_int(sqlite3_stmt *stmt, int index, int *value)
 	return AIL_ERROR_OK;
 }
 
-
-
 ail_error_e db_column_str(sqlite3_stmt *stmt, int index, char **str)
 {
 	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
@@ -528,8 +712,6 @@ ail_error_e db_column_str(sqlite3_stmt *stmt, int index, char **str)
 
 	return AIL_ERROR_OK;
 }
-
-
 
 ail_error_e db_reset(sqlite3_stmt *stmt)
 {
@@ -545,8 +727,6 @@ ail_error_e db_reset(sqlite3_stmt *stmt)
 	return AIL_ERROR_OK;
 }
 
-
-
 ail_error_e db_finalize(sqlite3_stmt *stmt)
 {
 	int ret;
@@ -558,8 +738,6 @@ ail_error_e db_finalize(sqlite3_stmt *stmt)
 
 	return AIL_ERROR_OK;
 }
-
-
 
 ail_error_e do_db_exec(const char *query, sqlite3 * fileSQL)
 {
@@ -581,13 +759,10 @@ ail_error_e do_db_exec(const char *query, sqlite3 * fileSQL)
 	return AIL_ERROR_OK;
 }
 
-
-
 ail_error_e db_exec_usr_rw(const char *query)
 {
 	return do_db_exec(query, db_info.dbUserrw);
 }
-
 
 ail_error_e db_exec_usr_ro(const char *query)
 {
@@ -603,7 +778,6 @@ ail_error_e db_exec_glo_rw(const char *query)
 {
 	return do_db_exec(query, db_info.dbGlobalrw);
 }
-
 
 ail_error_e db_close(void)
 {
@@ -660,5 +834,3 @@ int db_exec_sqlite_query(char *query, sqlite_query_callback callback, void *data
 	sqlite3_free(error_message);
 	return 0;
 }
-
-// End of file.

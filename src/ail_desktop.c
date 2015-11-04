@@ -270,6 +270,12 @@ _get_icon_with_path(char* icon, uid_t uid)
 		}
 #else
 		theme = strdup("default");
+		if (theme == NULL) {
+			_E("out of memory");
+			free(package);
+			return NULL;
+		}
+
 #endif
 
 		len = (0x01 << 7) + strlen(icon) + strlen(package) + strlen(theme);
@@ -286,7 +292,7 @@ _get_icon_with_path(char* icon, uid_t uid)
 			sqlite3_snprintf( len, icon_with_path, "%s%q", ail_get_icon_path(uid), icon);
 		else
 			sqlite3_snprintf( len, icon_with_path, "%s/%q/small/%q", ail_get_icon_path(GLOBAL_USER), theme, icon);
-			
+
 		if (access (icon_with_path, F_OK)) {
 			app_path = tzplatform_getenv(TZ_SYS_RW_APP);
 			if (app_path)
@@ -770,13 +776,12 @@ static int _count_all(uid_t uid)
 	if (uid != GLOBAL_USER)
 		ret = ail_filter_count_usr_appinfo(NULL, &count, uid);
 	else
-		ret = ail_filter_count_appinfo(NULL, &count);	
-	if(ret != AIL_ERROR_OK) {
+		ret = ail_filter_count_appinfo(NULL, &count);
+
+	if (ret != AIL_ERROR_OK) {
 		_E("cannot count appinfo");
 		count = -1;
 	}
-
-	retv_if(ret != AIL_ERROR_OK, -1);
 
 	return count;
 }
@@ -789,15 +794,24 @@ char *_pkgname_to_desktop(const char *package, uid_t uid)
 
 	retv_if(!package, NULL);
 
-  desktop_path = ail_get_desktop_path(uid);
+	desktop_path = ail_get_desktop_path(uid);
+	if (desktop_path == NULL) {
+		_E("Failed to get desktop path");
+		return NULL;
+	}
 
 	size = strlen(desktop_path) + strlen(package) + 10;
 	desktop = malloc(size);
-	retv_if(!desktop, NULL);
+	if (desktop == NULL) {
+		_E("out of memory");
+		free(desktop_path);
+		return NULL;
+	}
 
-  snprintf(desktop, size, "%s/%s.desktop", desktop_path, package);
+	snprintf(desktop, size, "%s/%s.desktop", desktop_path, package);
+	_D("uid: %d / desktop: [%s]\n",  uid, desktop);
 
-  _D("uid: %d / desktop: [%s]\n",  uid, desktop);
+	free(desktop_path);
 
 	return desktop;
 }
@@ -826,7 +840,6 @@ static inline int _bind_local_info(desktop_info_s* info, sqlite3_stmt * stmt)
 	return AIL_ERROR_OK;
 }
 
-
 static inline int _len_local_info(desktop_info_s* info)
 {
 	int len = 0;
@@ -845,7 +858,6 @@ static inline int _len_local_info(desktop_info_s* info)
 	return len;
 }
 
-
 static inline int _insert_local_info(desktop_info_s* info, uid_t uid)
 {
 	int len_query = SQL_INSERT_LOCALNAME_STR_LEN;
@@ -854,27 +866,30 @@ static inline int _insert_local_info(desktop_info_s* info, uid_t uid)
 	int ret = AIL_ERROR_OK;
 	sqlite3_stmt *stmt = NULL;
 	int i = 0;
+
 	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!info->localname, AIL_ERROR_INVALID_PARAMETER);
 
 	nb_locale_args = _len_local_info(info);
-
 	retv_if(!nb_locale_args, AIL_ERROR_INVALID_PARAMETER);
 
-	len_query += SQL_LOCALNAME_TRIPLET_STR_LEN*nb_locale_args +1;
+	len_query += SQL_LOCALNAME_TRIPLET_STR_LEN*nb_locale_args + 1;
 
-	query = (char *) malloc(len_query);
+	query = (char *)malloc(len_query);
 	retv_if(!query, AIL_ERROR_OUT_OF_MEMORY);
+
 	stpncpy(query, SQL_INSERT_LOCALNAME_INIT_STR, len_query);
-	for (i = 0; i <  nb_locale_args - 1; i++)
-		strcat(query, SQL_LOCALNAME_TRIPLET_STR);
+	for (i = 0; i < nb_locale_args - 1; i++)
+		strncat(query, SQL_LOCALNAME_TRIPLET_STR, len_query - strlen(query) - 1);
 
 	do {
-		if(uid != GLOBAL_USER)
+		if (uid != GLOBAL_USER)
 			ret = db_prepare_rw(query, &stmt);
-		else 
+		else
 			ret = db_prepare_globalrw(query, &stmt);
-		if (ret < 0) break;
+
+		if (ret < 0)
+			break;
 
 		ret = _bind_local_info(info, stmt);
 		if (ret < 0) {
@@ -882,6 +897,7 @@ static inline int _insert_local_info(desktop_info_s* info, uid_t uid)
 			db_finalize(stmt);
 			break;
 		}
+
 		ret = db_step(stmt);
 		if (ret != AIL_ERROR_NO_DATA) {
 			/* Insert Request doesn't return any data.
@@ -890,10 +906,12 @@ static inline int _insert_local_info(desktop_info_s* info, uid_t uid)
 			db_finalize(stmt);
 			break;
 		}
+
 		ret = db_finalize(stmt);
-	} while(0);
+	} while (0);
 
 	free(query);
+
 	return ret;
 }
 
@@ -940,9 +958,9 @@ static ail_error_e _init_desktop_info(desktop_info_s *info, const char *package,
 {
 	static int is_initdb = -1;
 
-  _D("package - [%s].", package);
+	_D("package - [%s].", package);
 
-	if(is_initdb == -1)
+	if (is_initdb == -1)
 		is_initdb = __is_ail_initdb();
 
 	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
@@ -955,7 +973,7 @@ static ail_error_e _init_desktop_info(desktop_info_s *info, const char *package,
 	info->x_slp_removable = 1;
 	info->x_slp_submode = 0;
 
-	if(is_initdb)
+	if (is_initdb)
 		info->x_slp_installedtime = 0;
 	else
 		info->x_slp_installedtime = time(NULL);
@@ -969,6 +987,7 @@ static ail_error_e _init_desktop_info(desktop_info_s *info, const char *package,
 
 	info->x_slp_packageid = strdup(package);
 	retv_if(!info->x_slp_packageid, AIL_ERROR_OUT_OF_MEMORY);
+
 	info->x_slp_appid = strdup(package);
 	retv_if(!info->x_slp_appid, AIL_ERROR_OUT_OF_MEMORY);
 
@@ -977,12 +996,10 @@ static ail_error_e _init_desktop_info(desktop_info_s *info, const char *package,
 	info->desktop = _pkgname_to_desktop(package, uid);
 	retv_if(!info->desktop, AIL_ERROR_FAIL);
 
-  _D("desktop - [%s].", info->desktop);
+	_D("desktop - [%s].", info->desktop);
 
 	return AIL_ERROR_OK;
 }
-
-
 
 static ail_error_e _read_desktop_info(desktop_info_s* info,uid_t uid)
 {
@@ -1124,11 +1141,15 @@ static ail_error_e _load_desktop_info(desktop_info_s* info, uid_t uid)
 	char query[AIL_SQL_QUERY_MAX_LEN];
 	sqlite3_stmt *stmt = NULL;
 	char w[AIL_SQL_QUERY_MAX_LEN];
+	const char *filter;
 
 	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
 
-	snprintf(w, sizeof(w), sql_get_filter(E_AIL_PROP_X_SLP_APPID_STR), info->package);
+	filter = sql_get_filter(E_AIL_PROP_X_SLP_APPID_STR);
+	if (filter == NULL)
+		return AIL_ERROR_FAIL;
 
+	snprintf(w, sizeof(w), filter, info->package);
 	snprintf(query, sizeof(query), "SELECT %s FROM %s WHERE %s",SQL_FLD_APP_INFO, SQL_TBL_APP_INFO, w);
 
 	do {
@@ -1337,19 +1358,17 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info, uid_t uid)
 		ret = db_exec_usr_rw(query);
 	else
 		ret = db_exec_glo_rw(query);
-	
+
+	_D("Add (%s).", query);
 	free(query);
+
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
 
 	if (info->localname)
 		_insert_local_info(info, uid);
 
-	_D("Add (%s).", query);
-
 	return AIL_ERROR_OK;
 }
-
-
 
 static ail_error_e _update_desktop_info(desktop_info_s *info, uid_t uid)
 {
@@ -1493,7 +1512,7 @@ static ail_error_e _remove_package(const char* package, uid_t uid)
 	}
 	snprintf(query, size, "delete from localname where package = '%s'", package);
 	_D("query=%s",query);
-	
+
 	if(uid != GLOBAL_USER) {
 		if (db_exec_usr_rw(query) < 0) {
 			free(query);
@@ -1551,7 +1570,7 @@ static ail_error_e _clean_pkgid_data(const char* pkgid, uid_t uid)
 		if (db_exec_glo_rw(query) < 0) {
 			free(query);
 			return AIL_ERROR_DB_FAILED;
-		}	
+		}
 	}
 	_D("Clean pkgid data (%s).", pkgid);
 	free(query);
@@ -1644,7 +1663,6 @@ static int __is_authorized()
 		return 0;
 }
 
-
 /* Public functions */
 EXPORT_API ail_error_e ail_usr_desktop_add(const char *appid, uid_t uid)
 {
@@ -1654,25 +1672,28 @@ EXPORT_API ail_error_e ail_usr_desktop_add(const char *appid, uid_t uid)
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
 
 	ret = _init_desktop_info(&info, appid, uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
-	ret = _read_desktop_info(&info,uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	ret = _read_desktop_info(&info, uid);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
 	ret = _insert_desktop_info(&info, uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
 	ret = _send_db_done_noti(NOTI_ADD, appid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
+end:
 	_fini_desktop_info(&info);
 
-	return AIL_ERROR_OK;
+	return ret;
 }
 
 EXPORT_API ail_error_e ail_desktop_add(const char *appid)
 {
-	return ail_usr_desktop_add(appid,GLOBAL_USER);
+	return ail_usr_desktop_add(appid, GLOBAL_USER);
 }
 
 EXPORT_API ail_error_e ail_usr_desktop_update(const char *appid, uid_t uid)
@@ -1683,20 +1704,23 @@ EXPORT_API ail_error_e ail_usr_desktop_update(const char *appid, uid_t uid)
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
 
 	ret = _init_desktop_info(&info, appid, uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
-	ret = _read_desktop_info(&info,uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	ret = _read_desktop_info(&info, uid);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
 	ret = _update_desktop_info(&info, uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
 	ret = _send_db_done_noti(NOTI_UPDATE, appid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
+end:
 	_fini_desktop_info(&info);
 
-	return AIL_ERROR_OK;
+	return ret;
 }
 
 EXPORT_API ail_error_e ail_desktop_update(const char *appid)
@@ -1753,17 +1777,19 @@ EXPORT_API ail_error_e ail_usr_desktop_fota(const char *appid, uid_t uid)
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
 
 	ret = _init_desktop_info(&info, appid, uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
 	ret = _read_desktop_info(&info,uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
 	ret = _insert_desktop_info(&info, uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
 
+end:
 	_fini_desktop_info(&info);
 
-	return AIL_ERROR_OK;
+	return ret;
 }
 
 EXPORT_API ail_error_e ail_desktop_fota(const char *appid)
@@ -1773,9 +1799,7 @@ EXPORT_API ail_error_e ail_desktop_fota(const char *appid)
 
 
 EXPORT_API ail_error_e ail_desktop_appinfo_modify_usr_bool(const char *appid,
-							     const char *property,
-							     bool value,
-							     bool broadcast, uid_t uid)
+		const char *property, bool value, bool broadcast, uid_t uid)
 {
 	desktop_info_s info = {0,};
 	ail_error_e ret;
@@ -1783,44 +1807,43 @@ EXPORT_API ail_error_e ail_desktop_appinfo_modify_usr_bool(const char *appid,
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
 
 	retv_if(strcmp(property, AIL_PROP_X_SLP_ENABLED_BOOL),
-		AIL_ERROR_INVALID_PARAMETER);
+				AIL_ERROR_INVALID_PARAMETER);
 
 	ret = _init_desktop_info(&info, appid, uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
 	ret = _load_desktop_info(&info, uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
 	ret = _modify_desktop_info_bool(&info, property, value);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
 	ret = _update_desktop_info(&info, uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
-	if (broadcast) {
+	if (broadcast)
 		ret = _send_db_done_noti(NOTI_UPDATE, appid);
-		retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
-	}
 
+end:
 	_fini_desktop_info(&info);
 
-	return AIL_ERROR_OK;
+	return ret;
 }
 
 EXPORT_API ail_error_e ail_desktop_appinfo_modify_bool(const char *appid,
-							     const char *property,
-							     bool value,
-							     bool broadcast)
+			const char *property, bool value, bool broadcast)
 {
-	return ail_desktop_appinfo_modify_usr_bool(appid, property, value, broadcast,
-			GLOBAL_USER);
+	return ail_desktop_appinfo_modify_usr_bool(appid, property, value,
+						broadcast, GLOBAL_USER);
 }
 
 
-EXPORT_API ail_error_e ail_desktop_appinfo_modify_usr_str(const char *appid, uid_t uid,
-							     const char *property,
-							     const char *value,
-							     bool broadcast)
+EXPORT_API ail_error_e ail_desktop_appinfo_modify_usr_str(const char *appid,
+	uid_t uid, const char *property, const char *value, bool broadcast)
 {
 	desktop_info_s info = {0,};
 	ail_error_e ret;
@@ -1828,36 +1851,36 @@ EXPORT_API ail_error_e ail_desktop_appinfo_modify_usr_str(const char *appid, uid
 	retv_if(!appid, AIL_ERROR_INVALID_PARAMETER);
 
 	ret = _init_desktop_info(&info, appid, uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
 	ret = _load_desktop_info(&info, uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
 	_D("info.name [%s], value [%s]", info.name, value);
 	ret = _modify_desktop_info_str(&info, property, value);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
+
 	_D("info.name [%s], value [%s]", info.name, value);
 
 	ret = _update_desktop_info(&info, uid);
-	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
+	if (ret != AIL_ERROR_OK)
+		goto end;
 
-	if (broadcast) {
+	if (broadcast)
 		ret = _send_db_done_noti(NOTI_UPDATE, appid);
-		retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
-	}
 
+end:
 	_fini_desktop_info(&info);
 
-	return AIL_ERROR_OK;
+	return ret;
 }
 
 EXPORT_API ail_error_e ail_desktop_appinfo_modify_str(const char *appid,
-							     const char *property,
-							     const char *value,
-							     bool broadcast)
+			const char *property, const char *value, bool broadcast)
 {
-	return ail_desktop_appinfo_modify_usr_str(appid, GLOBAL_USER, property, value,
-				broadcast);
+	return ail_desktop_appinfo_modify_usr_str(appid, GLOBAL_USER, property,
+						value, broadcast);
 }
-
-// End of File

@@ -21,8 +21,6 @@
  *
  */
 
-
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,52 +34,66 @@
 #include "ail_db.h"
 #include "ail_private.h"
 
-
 #ifdef _E
 #undef _E
 #endif
+
 #define _E(fmt, arg...) fprintf(stderr, "[AIL_INITDB][E][%s,%d] "fmt"\n", __FUNCTION__, __LINE__, ##arg);
 
 #ifdef _D
 #undef _D
 #endif
+
 #define _D(fmt, arg...) fprintf(stderr, "[AIL_INITDB][D][%s,%d] "fmt"\n", __FUNCTION__, __LINE__, ##arg);
 
 #define SET_DEFAULT_LABEL(x) \
-	if(smack_setlabel((x), "*", SMACK_LABEL_ACCESS)) _E("failed chsmack -a \"*\" %s", x) \
-	else _D("chsmack -a \"*\" %s", x)
+	do { \
+		if (smack_setlabel((x), "*", SMACK_LABEL_ACCESS)) \
+			_E("failed chsmack -a \"*\" %s", x); \
+		else \
+			_D("chsmack -a \"*\" %s", x); \
+	} while (0)
 
-
-static int __is_authorized()
+static int __is_authorized(void)
 {
 	/* ail_init db should be called by an user. */
-
 	uid_t uid = getuid();
-	if ((uid_t) OWNER_ROOT != uid)
+	if ((uid_t)OWNER_ROOT != uid)
 		return 1;
 	else
 		return 0;
 }
 
-
 int main(int argc, char *argv[])
 {
 	int ret;
+	char *db;
 
 	if (!__is_authorized()) {
 		fprintf(stderr, "You are not an authorized user!\n");
-		_D("You are root user! Please switch to a regular user\n");
+		_E("You are root user! Please switch to a regular user");
 		return -1;
 	}
-	else {
-		if(remove(ail_get_app_DB(getuid())))
-			_E(" %s is not removed", ail_get_app_DB(getuid()));
-		if(remove(ail_get_app_DB_journal(getuid())))
-			_E(" %s is not removed", ail_get_app_DB_journal(getuid()));
+
+	db = ail_get_app_DB(getuid());
+	if (db) {
+		if (remove(db))
+			_E("%s is not removed", db);
+
+		free(db);
+	}
+
+	db = ail_get_app_DB_journal(getuid());
+	if (db) {
+		if (remove(db))
+			_E("%s is not removed", db);
+
+		free(db);
 	}
 
 	ret = setenv("AIL_INITDB", "1", 1);
 	_D("AIL_INITDB : %d", ret);
+
 	if (db_open(DB_OPEN_RW, getuid()) != AIL_ERROR_OK) {
 		_E("Fail to create system databases");
 		return AIL_ERROR_DB_FAILED;
@@ -89,7 +101,3 @@ int main(int argc, char *argv[])
 
 	return AIL_ERROR_OK;
 }
-
-
-
-// END

@@ -138,7 +138,6 @@ typedef enum {
 	E_AIL_PROP_STR_MAX = E_AIL_PROP_X_SLP_INSTALLEDSTORAGE_STR,
 } ail_prop_str_e;
 
-
 /**
  * @brief integer type properties
  */
