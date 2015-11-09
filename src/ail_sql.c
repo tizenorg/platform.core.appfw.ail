@@ -63,7 +63,6 @@ static const char *filter[] = {
 	NULL,
 };
 
-
 inline const char *sql_get_filter(int prop)
 {
 	retv_if(prop < 0 || prop >= NUM_OF_PROP , NULL);
@@ -77,7 +76,7 @@ inline char *sql_get_locale(void)
 	char *r;
 	char buf[6];
 
-	retv_if ((l = ail_vconf_get_str(VCONFKEY_LANGSET)) == NULL, NULL);
+	retv_if((l = ail_vconf_get_str(VCONFKEY_LANGSET)) == NULL, NULL);
 	snprintf(buf, sizeof(buf), "%s", l);
 	free(l);
 
@@ -90,5 +89,3 @@ inline int sql_get_app_info_idx(int prop)
 {
 	return prop;
 }
-
-// End of file

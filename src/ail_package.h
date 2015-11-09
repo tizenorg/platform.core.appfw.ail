@@ -31,5 +31,6 @@
 ail_appinfo_h appinfo_create(void);
 void appinfo_destroy(ail_appinfo_h ai);
 void appinfo_set_stmt(ail_appinfo_h ai, sqlite3_stmt *stmt);
+int _appinfo_check_installed_storage(ail_appinfo_h ai);
 
 #endif  /* __AIL_PACKAGE_H__ */

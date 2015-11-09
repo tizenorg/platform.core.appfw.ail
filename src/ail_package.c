@@ -23,17 +23,19 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <assert.h>
+#include <unistd.h>
 #include <db-util.h>
 #include <tzplatform_config.h>
 #include <vconf.h>
+
 #include "ail.h"
 #include "ail_private.h"
 #include "ail_convert.h"
 #include "ail_db.h"
 #include "ail_sql.h"
 #include "ail_package.h"
-#include <assert.h>
-#include <unistd.h>
 
 #define LANGUAGE_LENGTH 2
 #define DEFAULT_LOCALE		"No Locale"
@@ -50,7 +52,6 @@ typedef struct _pkgmgr_locale_x {
 	char *locale;
 } pkgmgr_locale_x;
 
-
 /* get the first locale value*/
 static int __fallback_locale_cb(void *data, int ncols, char **coltxt, char **colname)
 {
@@ -66,7 +67,7 @@ static int __fallback_locale_cb(void *data, int ncols, char **coltxt, char **col
 
 static int __check_validation_of_query_cb(void *data, int ncols, char **coltxt, char **colname)
 {
-	int *p = (int*)data;
+	int *p = (int *)data;
 	*p = atoi(coltxt[0]);
 	return 0;
 }
@@ -85,7 +86,7 @@ static int __check_app_locale_from_app_localized_info_by_exact(const char *appid
 static int __check_app_locale_from_app_localized_info_by_fallback(const char *appid, const char *locale)
 {
 	int result_query = -1;
-	char wildcard[2] = {'%','\0'};
+	char wildcard[2] = {'%', '\0'};
 	char query[MAX_QUERY_LEN];
 	char lang[3] = {'\0'};
 	strncpy(lang, locale, LANGUAGE_LENGTH);
@@ -98,7 +99,7 @@ static int __check_app_locale_from_app_localized_info_by_fallback(const char *ap
 
 static char* __get_app_locale_from_app_localized_info_by_fallback(const char *appid, const char *locale)
 {
-	char wildcard[2] = {'%','\0'};
+	char wildcard[2] = {'%', '\0'};
 	char lang[3] = {'\0'};
 	char query[MAX_QUERY_LEN];
 	char *locale_new = NULL;
@@ -109,7 +110,7 @@ static char* __get_app_locale_from_app_localized_info_by_fallback(const char *ap
 		_E("Out of Memory!!!\n");
 		return NULL;
 	}
-	memset(info, NULL, sizeof(*info));
+	memset(info, 0x00, sizeof(*info));
 
 	strncpy(lang, locale, 2);
 	snprintf(query, MAX_QUERY_LEN, "select locale from localname where package='%s' and locale like '%s%s'", appid, lang, wildcard);
@@ -120,7 +121,7 @@ static char* __get_app_locale_from_app_localized_info_by_fallback(const char *ap
 	return locale_new;
 }
 
-static char* __convert_syslocale_to_manifest_locale(char *syslocale)
+static char* __convert_syslocale_to_manifest_locale(const char *syslocale)
 {
 	char *locale = malloc(6);
 	if (!locale) {
@@ -154,7 +155,7 @@ static char* __get_app_locale_by_fallback(const char *appid, const char *sysloca
 
 	/* fallback matching */
 	check_result = __check_app_locale_from_app_localized_info_by_fallback(appid, locale);
-	if(check_result == 1) {
+	if (check_result == 1) {
 		   locale_new = __get_app_locale_from_app_localized_info_by_fallback(appid, locale);
 		   _D("%s found (%s) language-locale in DB by fallback!\n", appid, locale_new);
 		   free(locale);
@@ -183,7 +184,7 @@ static ail_error_e __retrieve_all_column(ail_appinfo_h ai)
 
 	for (i = 0; i < NUM_OF_PROP; i++) {
 		err = db_column_str(ai->stmt, i, &col);
-		if (AIL_ERROR_OK != err) 
+		if (AIL_ERROR_OK != err)
 			break;
 
 		if (!col) {
@@ -222,15 +223,13 @@ int _appinfo_check_installed_storage(ail_appinfo_h ai)
 	if (ai->stmt) {
 		prop = _ail_convert_to_prop_str(AIL_PROP_X_SLP_INSTALLEDSTORAGE_STR);
 		index = sql_get_app_info_idx(prop);
-		if (db_column_str(ai->stmt, index, &installed_storage) < 0){
+		if (db_column_str(ai->stmt, index, &installed_storage) < 0)
 			return AIL_ERROR_OK;
-		}
 
 		prop = _ail_convert_to_prop_str(AIL_PROP_X_SLP_PKGID_STR);
 		index = sql_get_app_info_idx(prop);
-		if (db_column_str(ai->stmt, index, &pkgid) < 0){
+		if (db_column_str(ai->stmt, index, &pkgid) < 0)
 			return AIL_ERROR_OK;
-		}
 	} else {
 		prop = _ail_convert_to_prop_str(AIL_PROP_X_SLP_INSTALLEDSTORAGE_STR);
 		installed_storage = ai->values[prop];
@@ -243,7 +242,7 @@ int _appinfo_check_installed_storage(ail_appinfo_h ai)
 		snprintf(buf, AIL_SQL_QUERY_MAX_LEN - 1, "%s%s", PKG_SD_PATH, pkgid);
 		if (access(buf, R_OK) != 0) {
 			_E("can not access [%s]", buf);
-			return AIL_ERROR_OK;//tmep, it will be fixed to ::  return AIL_ERROR_FAIL;
+			return AIL_ERROR_OK; /* tmep, it will be fixed to ::  return AIL_ERROR_FAIL; */
 		}
 	}
 
@@ -259,7 +258,7 @@ ail_appinfo_h appinfo_create(void)
 {
 	ail_appinfo_h ai;
 	ai = calloc(1, sizeof(struct ail_appinfo));
-	retv_if (NULL == ai, NULL);
+	retv_if(ai == NULL, NULL);
 	ai->stmt = NULL;
 
 	return ai;
@@ -284,9 +283,8 @@ EXPORT_API ail_error_e ail_destroy_appinfo(ail_appinfo_h ai)
 	retv_if(!ai->values, AIL_ERROR_INVALID_PARAMETER);
 
 	for (i = 0; i < NUM_OF_PROP; i++) {
-		if (ai->values[i]) {
+		if (ai->values[i])
 			free(ai->values[i]);
-		}
 	}
 
 	free(ai->values);
@@ -463,7 +461,7 @@ EXPORT_API ail_error_e ail_appinfo_get_bool(const ail_appinfo_h ai, const char *
 			return AIL_ERROR_DB_FAILED;
 	} else {
 		val = atoi(ai->values[prop]);
-		*value = (val == 0? false : true);
+		*value = (val == 0) ? false : true;
 	}
 	return AIL_ERROR_OK;
 }
@@ -503,9 +501,9 @@ char *appinfo_get_localname(const char *package, char *locale, uid_t uid)
 	snprintf(query, sizeof(query), QUERY_GET_LOCALNAME, package, locale);
 
 	if (uid != GLOBAL_USER)
-		retv_if (db_prepare(query, &stmt) < 0, NULL);
+		retv_if(db_prepare(query, &stmt) < 0, NULL);
 	else
-		retv_if (db_prepare_globalro(query, &stmt) < 0, NULL);
+		retv_if(db_prepare_globalro(query, &stmt) < 0, NULL);
 
 	do {
 		if (db_step(stmt) < 0)
@@ -520,7 +518,7 @@ char *appinfo_get_localname(const char *package, char *locale, uid_t uid)
 		db_finalize(stmt);
 
 		return localname;
-	} while(0);
+	} while (0);
 
 	db_finalize(stmt);
 	return NULL;
@@ -551,16 +549,15 @@ EXPORT_API ail_error_e ail_appinfo_get_str(const ail_appinfo_h ai, const char *p
 		if (ai->stmt) {
 			if (db_column_str(ai->stmt, E_AIL_PROP_X_SLP_PACKAGETYPE_STR, &pkg_type) < 0)
 				return AIL_ERROR_DB_FAILED;
-			if(pkg_type && (strcasecmp(pkg_type, "tpk") ==0))
-			{
+			if (pkg_type && (strcasecmp(pkg_type, "tpk") == 0)) {
 				locale = sql_get_locale();
-				retv_if (NULL == locale, AIL_ERROR_FAIL);
+				retv_if(locale == NULL, AIL_ERROR_FAIL);
 
-				if (db_column_str(ai->stmt, E_AIL_PROP_PACKAGE_STR, &pkg) < 0){
+				if (db_column_str(ai->stmt, E_AIL_PROP_PACKAGE_STR, &pkg) < 0) {
 					free(locale);
 					return AIL_ERROR_DB_FAILED;
 				}
-				if (pkg == NULL){
+				if (pkg == NULL) {
 					free(locale);
 					return AIL_ERROR_DB_FAILED;
 				}
@@ -576,13 +573,12 @@ EXPORT_API ail_error_e ail_appinfo_get_str(const ail_appinfo_h ai, const char *p
 		} else {
 			pkg_type = ai->values[E_AIL_PROP_X_SLP_PACKAGETYPE_STR];
 			pkg = ai->values[E_AIL_PROP_PACKAGE_STR];
-			retv_if (NULL == pkg, AIL_ERROR_FAIL);
+			retv_if(pkg == NULL, AIL_ERROR_FAIL);
 
 			locale = sql_get_locale();
-			retv_if (NULL == locale, AIL_ERROR_FAIL);
+			retv_if(locale == NULL, AIL_ERROR_FAIL);
 
-			if(pkg_type && (strcasecmp(pkg_type, "tpk") ==0))
-			{
+			if (pkg_type && (strcasecmp(pkg_type, "tpk") == 0)) {
 				locale_new = __get_app_locale_by_fallback(pkg, locale);
 				localname = (char *)appinfo_get_localname(pkg, locale_new, GLOBAL_USER);
 				free(locale);
@@ -608,15 +604,16 @@ EXPORT_API ail_error_e ail_appinfo_get_str(const ail_appinfo_h ai, const char *p
 
 	if (ai->stmt) {
 		index = sql_get_app_info_idx(prop);
-		if (db_column_str(ai->stmt, index, &value) < 0){
+		if (db_column_str(ai->stmt, index, &value) < 0)
 			return AIL_ERROR_DB_FAILED;
-		}
+
 		*str = value;
 	} else
 		*str = ai->values[prop];
 
 	return AIL_ERROR_OK;
 }
+
 EXPORT_API ail_error_e ail_appinfo_get_usr_str(const ail_appinfo_h ai, const char *property, uid_t uid, char **str)
 {
 	int index;
@@ -642,16 +639,15 @@ EXPORT_API ail_error_e ail_appinfo_get_usr_str(const ail_appinfo_h ai, const cha
 		if (ai->stmt) {
 			if (db_column_str(ai->stmt, E_AIL_PROP_X_SLP_PACKAGETYPE_STR, &pkg_type) < 0)
 				return AIL_ERROR_DB_FAILED;
-			if(pkg_type && (strcasecmp(pkg_type, "tpk") ==0))
-			{
+			if (pkg_type && (strcasecmp(pkg_type, "tpk") == 0)) {
 				locale = sql_get_locale();
-				retv_if (NULL == locale, AIL_ERROR_FAIL);
+				retv_if(locale == NULL, AIL_ERROR_FAIL);
 
-				if (db_column_str(ai->stmt, E_AIL_PROP_PACKAGE_STR, &pkg) < 0){
+				if (db_column_str(ai->stmt, E_AIL_PROP_PACKAGE_STR, &pkg) < 0) {
 					free(locale);
 					return AIL_ERROR_DB_FAILED;
 				}
-				if (pkg == NULL){
+				if (pkg == NULL) {
 					free(locale);
 					return AIL_ERROR_DB_FAILED;
 				}
@@ -667,13 +663,12 @@ EXPORT_API ail_error_e ail_appinfo_get_usr_str(const ail_appinfo_h ai, const cha
 		} else {
 			pkg_type = ai->values[E_AIL_PROP_X_SLP_PACKAGETYPE_STR];
 			pkg = ai->values[E_AIL_PROP_PACKAGE_STR];
-			retv_if (NULL == pkg, AIL_ERROR_FAIL);
+			retv_if(pkg == NULL, AIL_ERROR_FAIL);
 
 			locale = sql_get_locale();
-			retv_if (NULL == locale, AIL_ERROR_FAIL);
+			retv_if(locale == NULL, AIL_ERROR_FAIL);
 
-			if(pkg_type && (strcasecmp(pkg_type, "tpk") ==0))
-			{
+			if (pkg_type && (strcasecmp(pkg_type, "tpk") == 0)) {
 				locale_new = __get_app_locale_by_fallback(pkg, locale);
 				localname = (char *)appinfo_get_localname(pkg, locale_new, uid);
 				free(locale);
@@ -699,9 +694,9 @@ EXPORT_API ail_error_e ail_appinfo_get_usr_str(const ail_appinfo_h ai, const cha
 
 	if (ai->stmt) {
 		index = sql_get_app_info_idx(prop);
-		if (db_column_str(ai->stmt, index, &value) < 0){
+		if (db_column_str(ai->stmt, index, &value) < 0)
 			return AIL_ERROR_DB_FAILED;
-		}
+
 		*str = value;
 	} else
 		*str = ai->values[prop];
@@ -709,10 +704,7 @@ EXPORT_API ail_error_e ail_appinfo_get_usr_str(const ail_appinfo_h ai, const cha
 	return AIL_ERROR_OK;
 }
 
-
 EXPORT_API ail_error_e ail_close_appinfo_db(void)
 {
 	return db_close();
 }
-
-// End of file

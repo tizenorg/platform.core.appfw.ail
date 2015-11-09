@@ -42,6 +42,7 @@
 #include "ail_sql.h"
 #include "ail.h"
 #include "ail_vconf.h"
+#include "ail_convert.h"
 
 #define BUFSIZE 4096
 #define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
@@ -55,7 +56,7 @@
 #define SQL_INSERT_LOCALNAME_INIT_STR  SQL_INSERT_LOCALNAME_STR"( ?, ?, ?) "
 
 #define SQL_LOCALNAME_TRIPLET_STR  ", ( ?, ?, ?)"
-#define SQL_LOCALNAME_TRIPLET_STR_LEN (sizeof(SQL_LOCALNAME_TRIPLET_STR)-1)
+#define SQL_LOCALNAME_TRIPLET_STR_LEN (sizeof(SQL_LOCALNAME_TRIPLET_STR) - 1)
 
 typedef enum {
 	NOTI_ADD,
@@ -69,23 +70,24 @@ struct entry_parser {
 	ail_error_e (*value_cb)(void *data, char *tag, char *value, uid_t uid);
 };
 
-inline static char *_ltrim(char *str)
+static inline char *_ltrim(char *str)
 {
-	if (!str) return NULL;
+	if (!str)
+		return NULL;
 
-	while (*str == ' ' || *str == '\t' || *str == '\n') str ++;
+	while (*str == ' ' || *str == '\t' || *str == '\n')
+		str++;
 
 	return str;
 }
 
-
-
-inline static int _rtrim(char *str)
+static inline int _rtrim(char *str)
 {
 	int len;
 
 	len = strlen(str);
-	while (--len >= 0 && (str[len] == ' ' || str[len] == '\n' || str[len] == '\t')) str[len] = '\0';
+	while (--len >= 0 && (str[len] == ' ' || str[len] == '\n' || str[len] == '\t'))
+		str[len] = '\0';
 
 	return len;
 }
@@ -129,8 +131,6 @@ typedef struct {
 	GSList*		localname;
 } desktop_info_s;
 
-
-
 static ail_error_e _read_exec(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
@@ -145,7 +145,7 @@ static ail_error_e _read_exec(void *data, char *tag, char *value, uid_t uid)
 	retv_if(!info->exec, AIL_ERROR_OUT_OF_MEMORY);
 
 	temp_exec = strdup(value);
-	if(!temp_exec) {
+	if (!temp_exec) {
 		free(info->exec);
 		return AIL_ERROR_OUT_OF_MEMORY;
 	}
@@ -153,7 +153,7 @@ static ail_error_e _read_exec(void *data, char *tag, char *value, uid_t uid)
 	token_exe_path = strtok_r(temp_exec, argsdelimiter, &save_ptr);
 
 	info->x_slp_exe_path = strdup(token_exe_path);
-	if(!info->x_slp_exe_path) {
+	if (!info->x_slp_exe_path) {
 		free(info->exec);
 		info->exec = NULL;
 		free(temp_exec);
@@ -164,8 +164,6 @@ static ail_error_e _read_exec(void *data, char *tag, char *value, uid_t uid)
 
 	return AIL_ERROR_OK;
 }
-
-
 
 static ail_error_e _read_name(void *data, char *tag, char *value, uid_t uid)
 {
@@ -178,17 +176,17 @@ static ail_error_e _read_name(void *data, char *tag, char *value, uid_t uid)
 	if (tag && strlen(tag) > 0) {
 		struct name_item *item;
 		item = (struct name_item *)calloc(1, sizeof(struct name_item));
-		retv_if (NULL == item, AIL_ERROR_OUT_OF_MEMORY);
+		retv_if(NULL == item, AIL_ERROR_OUT_OF_MEMORY);
 
 		SAFE_FREE_AND_STRDUP(tag, item->locale);
-		if(NULL == item->locale) {
+		if (item->locale == NULL) {
 			_E("(NULL == item->locale) return\n");
 			free(item);
 			return AIL_ERROR_OUT_OF_MEMORY;
 		}
 
 		SAFE_FREE_AND_STRDUP(value, item->name);
-		if(NULL == item->name) {
+		if (item->name == NULL) {
 			_E("(NULL == item->name) return\n");
 			free(item->locale);
 			free(item);
@@ -200,13 +198,11 @@ static ail_error_e _read_name(void *data, char *tag, char *value, uid_t uid)
 		return AIL_ERROR_OK;
 	} else {
 		SAFE_FREE_AND_STRDUP(value, info->name);
-		retv_if (!info->name, AIL_ERROR_OUT_OF_MEMORY);
+		retv_if(!info->name, AIL_ERROR_OUT_OF_MEMORY);
 
 		return AIL_ERROR_OK;
 	}
 }
-
-
 
 static ail_error_e _read_type(void *data, char *tag, char *value, uid_t uid)
 {
@@ -216,32 +212,28 @@ static ail_error_e _read_type(void *data, char *tag, char *value, uid_t uid)
 	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
 
 	SAFE_FREE_AND_STRDUP(value, info->type);
-	retv_if (!info->type, AIL_ERROR_OUT_OF_MEMORY);
+	retv_if(!info->type, AIL_ERROR_OUT_OF_MEMORY);
 
 	return AIL_ERROR_OK;
 }
 
-
-static char*
-_get_package_from_icon(char* icon)
+static char *_get_package_from_icon(char* icon)
 {
-	char* package;
-	char* extension;
+	char *package;
+	char *extension;
 
 	retv_if(!icon, NULL);
 
 	package = strdup(icon);
 	retv_if(!package, NULL);
 	extension = rindex(package, '.');
-	if (extension) {
+	if (extension)
 		*extension = '\0';
-	} else {
+	else
 		_E("cannot extract from icon [%s] to package.", icon);
-	}
 
 	return package;
 }
-
 
 static char*
 _get_icon_with_path(char* icon, uid_t uid)
@@ -253,22 +245,12 @@ _get_icon_with_path(char* icon, uid_t uid)
 		char* theme = NULL;
 		char* icon_with_path = NULL;
 		int len;
-		char *app_path = NULL;
+		const char *app_path = NULL;
 
 		package = _get_package_from_icon(icon);
 		retv_if(!package, NULL);
 
-/* "db/setting/theme" is not exist */
-#if 0
-		theme = ail_vconf_get_str("db/setting/theme");
-		if (!theme) {
-			theme = strdup("default");
-			if(!theme) {
-				free(package);
-				return NULL;
-			}
-		}
-#else
+		/* "db/setting/theme" is not exist */
 		theme = strdup("default");
 		if (theme == NULL) {
 			_E("out of memory");
@@ -276,11 +258,9 @@ _get_icon_with_path(char* icon, uid_t uid)
 			return NULL;
 		}
 
-#endif
-
 		len = (0x01 << 7) + strlen(icon) + strlen(package) + strlen(theme);
 		icon_with_path = malloc(len);
-		if(icon_with_path == NULL) {
+		if (icon_with_path == NULL) {
 			_E("icon_with_path == NULL\n");
 			free(package);
 			free(theme);
@@ -288,16 +268,17 @@ _get_icon_with_path(char* icon, uid_t uid)
 		}
 
 		memset(icon_with_path, 0, len);
-		if (uid != GLOBAL_USER)
-			sqlite3_snprintf( len, icon_with_path, "%s%q", ail_get_icon_path(uid), icon);
-		else
-			sqlite3_snprintf( len, icon_with_path, "%s/%q/small/%q", ail_get_icon_path(GLOBAL_USER), theme, icon);
 
-		if (access (icon_with_path, F_OK)) {
+		if (uid != GLOBAL_USER)
+			sqlite3_snprintf(len, icon_with_path, "%s%q", ail_get_icon_path(uid), icon);
+		else
+			sqlite3_snprintf(len, icon_with_path, "%s/%q/small/%q", ail_get_icon_path(GLOBAL_USER), theme, icon);
+
+		if (access(icon_with_path, F_OK)) {
 			app_path = tzplatform_getenv(TZ_SYS_RW_APP);
 			if (app_path)
-				sqlite3_snprintf( len, icon_with_path, "%s/%q/res/icons/%q/small/%q",app_path, package, theme, icon);
-			if (access (icon_with_path, F_OK))
+				sqlite3_snprintf(len, icon_with_path, "%s/%q/res/icons/%q/small/%q", app_path, package, theme, icon);
+			if (access(icon_with_path, F_OK))
 				_E("Cannot find icon path");
 		}
 		free(theme);
@@ -313,7 +294,6 @@ _get_icon_with_path(char* icon, uid_t uid)
 	}
 }
 
-
 static ail_error_e _read_icon(void *data, char *tag, char *value, uid_t uid)
 {
 	desktop_info_s *info = data;
@@ -323,12 +303,10 @@ static ail_error_e _read_icon(void *data, char *tag, char *value, uid_t uid)
 
 	info->icon = _get_icon_with_path(value, uid);
 
-	retv_if (!info->icon, AIL_ERROR_OUT_OF_MEMORY);
+	retv_if(!info->icon, AIL_ERROR_OUT_OF_MEMORY);
 
 	return AIL_ERROR_OK;
 }
-
-
 
 static ail_error_e _read_categories(void *data, char *tag, char *value, uid_t uid)
 {
@@ -338,12 +316,10 @@ static ail_error_e _read_categories(void *data, char *tag, char *value, uid_t ui
 	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
 
 	SAFE_FREE_AND_STRDUP(value, info->categories);
-	retv_if (!info->categories, AIL_ERROR_OUT_OF_MEMORY);
+	retv_if(!info->categories, AIL_ERROR_OUT_OF_MEMORY);
 
 	return AIL_ERROR_OK;
 }
-
-
 
 static ail_error_e _read_version(void *data, char *tag, char *value, uid_t uid)
 {
@@ -353,12 +329,10 @@ static ail_error_e _read_version(void *data, char *tag, char *value, uid_t uid)
 	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
 
 	SAFE_FREE_AND_STRDUP(value, info->version);
-	retv_if (!info->version, AIL_ERROR_OUT_OF_MEMORY);
+	retv_if(!info->version, AIL_ERROR_OUT_OF_MEMORY);
 
 	return AIL_ERROR_OK;
 }
-
-
 
 static ail_error_e _read_mimetype(void *data, char *tag, char *value, uid_t uid)
 {
@@ -375,7 +349,7 @@ static ail_error_e _read_mimetype(void *data, char *tag, char *value, uid_t uid)
 
 	size = getpagesize();
 	mimes_changed = calloc(1, size);
-	if(mimes_changed == NULL) {
+	if (mimes_changed == NULL) {
 		_E("(mimes_changed == NULL) return\n");
 		free(mimes_origin);
 		return AIL_ERROR_OUT_OF_MEMORY;
@@ -398,7 +372,7 @@ static ail_error_e _read_mimetype(void *data, char *tag, char *value, uid_t uid)
 			char *tmp;
 			size *= 2;
 			tmp = realloc(mimes_changed, size);
-			if(!tmp) {
+			if (!tmp) {
 				free(mimes_changed);
 				return AIL_ERROR_OUT_OF_MEMORY;
 			}
@@ -409,9 +383,8 @@ static ail_error_e _read_mimetype(void *data, char *tag, char *value, uid_t uid)
 		total_len += token_len;
 
 		token_unalias = strtok_r(NULL, ";", &save_ptr);
-		if (token_unalias) {
+		if (token_unalias)
 			strncat(mimes_changed, ";", size-strlen(mimes_changed)-1);
-		}
 	}
 
 	SAFE_FREE(info->mimetype);
@@ -419,8 +392,6 @@ static ail_error_e _read_mimetype(void *data, char *tag, char *value, uid_t uid)
 
 	return AIL_ERROR_OK;
 }
-
-
 
 static ail_error_e _read_nodisplay(void *data, char *tag, char *value, uid_t uid)
 {
@@ -765,27 +736,6 @@ static struct entry_parser entry_parsers[] = {
 	},
 };
 
-
-
-/* Utility functions */
-static int _count_all(uid_t uid)
-{
-	ail_error_e ret;
-	int count;
-
-	if (uid != GLOBAL_USER)
-		ret = ail_filter_count_usr_appinfo(NULL, &count, uid);
-	else
-		ret = ail_filter_count_appinfo(NULL, &count);
-
-	if (ret != AIL_ERROR_OK) {
-		_E("cannot count appinfo");
-		count = -1;
-	}
-
-	return count;
-}
-
 char *_pkgname_to_desktop(const char *package, uid_t uid)
 {
 	char *desktop;
@@ -818,18 +768,19 @@ char *_pkgname_to_desktop(const char *package, uid_t uid)
 
 static inline int _bind_local_info(desktop_info_s* info, sqlite3_stmt * stmt)
 {
-	int ret = 0;
 	unsigned long i = 0;
 	struct name_item *item;
 	GSList*	localname;
+
 	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!info->localname, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!stmt, AIL_ERROR_INVALID_PARAMETER);
+
 	localname = info->localname;
 	while (localname) {
 		item = (struct name_item *)	localname->data;
 		if (item && item->locale && item->name)	{
-			// Bind values for a triplet : package, locale, name
+			/* Bind values for a triplet : package, locale, name */
 			retv_if(db_bind_text(stmt, i+1, info->package) != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
 			retv_if(db_bind_text(stmt, i+2, item->locale) != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
 			retv_if(db_bind_text(stmt, i+3, item->name) != AIL_ERROR_OK, AIL_ERROR_DB_FAILED);
@@ -837,6 +788,7 @@ static inline int _bind_local_info(desktop_info_s* info, sqlite3_stmt * stmt)
 		}
 		localname = g_slist_next(localname);
 	}
+
 	return AIL_ERROR_OK;
 }
 
@@ -846,12 +798,12 @@ static inline int _len_local_info(desktop_info_s* info)
 	struct name_item *item;
 	GSList*	localname;
 	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
-	if(info->localname)	{
+	if (info->localname) {
 		localname = info->localname;
 		while (localname) {
 			item = (struct name_item *)	localname->data;
 			if (item && item->locale && item->name)
-				len ++;
+				len++;
 			localname = g_slist_next(localname);
 		}
 	}
@@ -893,7 +845,7 @@ static inline int _insert_local_info(desktop_info_s* info, uid_t uid)
 
 		ret = _bind_local_info(info, stmt);
 		if (ret < 0) {
-			_E("Can't bind locale information to this query - %s. ",query);
+			_E("Can't bind locale information to this query - %s. ", query);
 			db_finalize(stmt);
 			break;
 		}
@@ -902,7 +854,7 @@ static inline int _insert_local_info(desktop_info_s* info, uid_t uid)
 		if (ret != AIL_ERROR_NO_DATA) {
 			/* Insert Request doesn't return any data.
 			 * db_step should returns AIL_ERROR_NO_DATA in this case. */
-			_E("Can't execute this query - %s. ",query);
+			_E("Can't execute this query - %s. ", query);
 			db_finalize(stmt);
 			break;
 		}
@@ -944,10 +896,9 @@ static inline int _strlen_desktop_info(desktop_info_s* info)
 	return len;
 }
 
-
 int __is_ail_initdb(void)
 {
-	if( getenv("AIL_INITDB") || getenv("INITDB") )
+	if (getenv("AIL_INITDB") || getenv("INITDB"))
 		return 1;
 	else
 		return 0;
@@ -1001,7 +952,7 @@ static ail_error_e _init_desktop_info(desktop_info_s *info, const char *package,
 	return AIL_ERROR_OK;
 }
 
-static ail_error_e _read_desktop_info(desktop_info_s* info,uid_t uid)
+static ail_error_e _read_desktop_info(desktop_info_s *info, uid_t uid)
 {
 	char *line = NULL;
 	FILE *fp;
@@ -1018,9 +969,12 @@ static ail_error_e _read_desktop_info(desktop_info_s* info,uid_t uid)
 		char *tmp, *field, *field_name, *tag, *value;
 
 		tmp = _ltrim(line);
-		if(tmp == NULL) continue;
-		if (*tmp == '#') continue;
-		if (_rtrim(tmp) <= 0) continue;
+		if (tmp == NULL)
+			continue;
+		if (*tmp == '#')
+			continue;
+		if (_rtrim(tmp) <= 0)
+			continue;
 
 		len = strlen(line) + 1;
 		field = calloc(1, len);
@@ -1028,9 +982,8 @@ static ail_error_e _read_desktop_info(desktop_info_s* info,uid_t uid)
 		tag = calloc(1, len);
 		value = calloc(1, len);
 
-		if (!field || !field_name || !tag || !value) {
+		if (!field || !field_name || !tag || !value)
 			goto NEXT;
-		}
 
 		sscanf(tmp, "%[^=]=%[^\n]", field, value);
 		_rtrim(field);
@@ -1038,15 +991,13 @@ static ail_error_e _read_desktop_info(desktop_info_s* info,uid_t uid)
 
 		sscanf(field, "%[^[][%[^]]]", field_name, tag);
 
-		if (!field_name || !strlen(field_name)){
+		if (!field_name || !strlen(field_name))
 			goto NEXT;
-		}
 
-		for (idx = 0; entry_parsers[idx].field; idx ++) {
+		for (idx = 0; entry_parsers[idx].field; idx++) {
 			if (!g_ascii_strcasecmp(entry_parsers[idx].field, field_name) && entry_parsers[idx].value_cb) {
-				if (entry_parsers[idx].value_cb(info, tag, tmp,uid) != AIL_ERROR_OK) {
+				if (entry_parsers[idx].value_cb(info, tag, tmp, uid) != AIL_ERROR_OK)
 					_E("field - [%s] is wrong.", field_name);
-				}
 				break;
 			}
 		}
@@ -1150,19 +1101,20 @@ static ail_error_e _load_desktop_info(desktop_info_s* info, uid_t uid)
 		return AIL_ERROR_FAIL;
 
 	snprintf(w, sizeof(w), filter, info->package);
-	snprintf(query, sizeof(query), "SELECT %s FROM %s WHERE %s",SQL_FLD_APP_INFO, SQL_TBL_APP_INFO, w);
+	snprintf(query, sizeof(query), "SELECT %s FROM %s WHERE %s", SQL_FLD_APP_INFO, SQL_TBL_APP_INFO, w);
 
 	do {
 		ret = db_open(DB_OPEN_RO, uid);
-		if (ret < 0) break;
+		if (ret < 0)
+			break;
 
-		if (uid != GLOBAL_USER) {
+		if (uid != GLOBAL_USER)
 			ret = db_prepare(query, &stmt);
-		} else {
+		else
 			ret = db_prepare_globalro(query, &stmt);
-		}
 
-		if (ret < 0) break;
+		if (ret < 0)
+			break;
 
 		ret = db_step(stmt);
 		if (ret < 0) {
@@ -1177,10 +1129,11 @@ static ail_error_e _load_desktop_info(desktop_info_s* info, uid_t uid)
 		}
 
 		ret = db_finalize(stmt);
-		if (ret < 0) break;
+		if (ret < 0)
+			break;
 
 		return AIL_ERROR_OK;
-	} while(0);
+	} while (0);
 
 	return ret;
 }
@@ -1190,7 +1143,6 @@ static ail_error_e _modify_desktop_info_bool(desktop_info_s* info,
 						  bool value)
 {
 	ail_prop_bool_e prop;
-	int val;
 
 	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!property, AIL_ERROR_INVALID_PARAMETER);
@@ -1201,11 +1153,11 @@ static ail_error_e _modify_desktop_info_bool(desktop_info_s* info,
 		return AIL_ERROR_INVALID_PARAMETER;
 
 	switch (prop) {
-		case E_AIL_PROP_X_SLP_ENABLED_BOOL:
-			info->x_slp_enabled = (int)value;
-			break;
-		default:
-			return AIL_ERROR_FAIL;
+	case E_AIL_PROP_X_SLP_ENABLED_BOOL:
+		info->x_slp_enabled = (int)value;
+		break;
+	default:
+		return AIL_ERROR_FAIL;
 	}
 
 	return AIL_ERROR_OK;
@@ -1216,8 +1168,7 @@ static ail_error_e _modify_desktop_info_str(desktop_info_s* info,
 						  const char *property,
 						  const char *value)
 {
-	ail_prop_bool_e prop;
-	int val;
+	int prop;
 
 	retv_if(!info, AIL_ERROR_INVALID_PARAMETER);
 	retv_if(!property, AIL_ERROR_INVALID_PARAMETER);
@@ -1228,21 +1179,21 @@ static ail_error_e _modify_desktop_info_str(desktop_info_s* info,
 		return AIL_ERROR_INVALID_PARAMETER;
 
 	switch (prop) {
-		case E_AIL_PROP_NAME_STR:
-			SAFE_FREE_AND_STRDUP(value, info->name);
-			retv_if (!info->name, AIL_ERROR_OUT_OF_MEMORY);
-			break;
-		case E_AIL_PROP_X_SLP_SVC_STR:
-			SAFE_FREE_AND_STRDUP(value, info->x_slp_svc);
-			retv_if (!info->x_slp_svc, AIL_ERROR_OUT_OF_MEMORY);
-			break;
-		case E_AIL_PROP_X_SLP_INSTALLEDSTORAGE_STR:
-			SAFE_FREE_AND_STRDUP(value, info->x_slp_installedstorage);
-			retv_if (!info->x_slp_installedstorage, AIL_ERROR_OUT_OF_MEMORY);
-			break;
-		default:
-			_E("prop[%d] is not defined\n", prop);
-			return AIL_ERROR_FAIL;
+	case E_AIL_PROP_NAME_STR:
+		SAFE_FREE_AND_STRDUP(value, info->name);
+		retv_if(!info->name, AIL_ERROR_OUT_OF_MEMORY);
+		break;
+	case E_AIL_PROP_X_SLP_SVC_STR:
+		SAFE_FREE_AND_STRDUP(value, info->x_slp_svc);
+		retv_if(!info->x_slp_svc, AIL_ERROR_OUT_OF_MEMORY);
+		break;
+	case E_AIL_PROP_X_SLP_INSTALLEDSTORAGE_STR:
+		SAFE_FREE_AND_STRDUP(value, info->x_slp_installedstorage);
+		retv_if(!info->x_slp_installedstorage, AIL_ERROR_OUT_OF_MEMORY);
+		break;
+	default:
+		_E("prop[%d] is not defined\n", prop);
+		return AIL_ERROR_FAIL;
 	}
 
 	return AIL_ERROR_OK;
@@ -1259,12 +1210,12 @@ static inline void _insert_localname(gpointer data, gpointer user_data, uid_t ui
 	sqlite3_snprintf(sizeof(query), query, "insert into localname (package, locale, name, x_slp_pkgid) "
 			"values ('%q', '%q', '%q', '%q');",
 			info->package, item->locale, item->name, info->x_slp_pkgid);
-	if(uid != GLOBAL_USER) {
+	if (uid != GLOBAL_USER) {
 		if (db_exec_usr_rw(query) < 0)
-			_E("Failed to insert local name of package[%s]",info->package);
+			_E("Failed to insert local name of package[%s]", info->package);
 	} else {
 		if (db_exec_glo_rw(query) < 0)
-			_E("Failed to insert local name of package[%s]",info->package);
+			_E("Failed to insert local name of package[%s]", info->package);
 	}
 }
 
@@ -1349,7 +1300,7 @@ static ail_error_e _insert_desktop_info(desktop_info_s *info, uid_t uid)
 		);
 
 	ret = db_open(DB_OPEN_RW, uid);
-	if(ret != AIL_ERROR_OK) {
+	if (ret != AIL_ERROR_OK) {
 		_E("(tmp == NULL) return\n");
 		free(query);
 		return AIL_ERROR_DB_FAILED;
@@ -1375,17 +1326,16 @@ static ail_error_e _update_desktop_info(desktop_info_s *info, uid_t uid)
 	char *query;
 	int len;
 
-	retv_if (NULL == info, AIL_ERROR_INVALID_PARAMETER);
+	retv_if(NULL == info, AIL_ERROR_INVALID_PARAMETER);
 
-	if (db_open(DB_OPEN_RW, uid) < 0) {
+	if (db_open(DB_OPEN_RW, uid) < 0)
 		return AIL_ERROR_DB_FAILED;
-	}
 
 	len = _strlen_desktop_info(info) + (0x01 << 10);
 	query = calloc(1, len);
 	retv_if(!query, AIL_ERROR_OUT_OF_MEMORY);
 
-	sqlite3_snprintf ( len, query, "update app_info set "
+	sqlite3_snprintf(len, query, "update app_info set "
 		"exec='%q', "
 		"name='%q', "
 		"type='%q', "
@@ -1447,26 +1397,26 @@ static ail_error_e _update_desktop_info(desktop_info_s *info, uid_t uid)
 		info->desktop,
 		info->package);
 
-	if(uid != GLOBAL_USER) {
+	if (uid != GLOBAL_USER) {
 		if (db_exec_usr_rw(query) < 0) {
-			free (query);
+			free(query);
 			return AIL_ERROR_DB_FAILED;
 		}
 	} else {
 		if (db_exec_glo_rw(query) < 0) {
-			free (query);
+			free(query);
 			return AIL_ERROR_DB_FAILED;
 		}
 	}
 	snprintf(query, len, "delete from localname where package = '%s'", info->package);
 	if (uid != GLOBAL_USER) {
 		if (db_exec_usr_rw(query) < 0) {
-			free (query);
+			free(query);
 			return AIL_ERROR_DB_FAILED;
 		}
 	} else {
 		if (db_exec_glo_rw(query) < 0) {
-			free (query);
+			free(query);
 			return AIL_ERROR_DB_FAILED;
 		}
 	}
@@ -1489,9 +1439,8 @@ static ail_error_e _remove_package(const char* package, uid_t uid)
 
 	retv_if(!package, AIL_ERROR_INVALID_PARAMETER);
 
-	if (db_open(DB_OPEN_RW, uid) < 0) {
+	if (db_open(DB_OPEN_RW, uid) < 0)
 		return AIL_ERROR_DB_FAILED;
-	}
 
 	size = strlen(package) + (0x01 << 10);
 	query = calloc(1, size);
@@ -1499,7 +1448,7 @@ static ail_error_e _remove_package(const char* package, uid_t uid)
 
 	snprintf(query, size, "delete from app_info where package = '%s'", package);
 
-	if(uid != GLOBAL_USER) {
+	if (uid != GLOBAL_USER) {
 		if (db_exec_usr_rw(query) < 0) {
 			free(query);
 			return AIL_ERROR_DB_FAILED;
@@ -1511,9 +1460,9 @@ static ail_error_e _remove_package(const char* package, uid_t uid)
 		}
 	}
 	snprintf(query, size, "delete from localname where package = '%s'", package);
-	_D("query=%s",query);
+	_D("query=%s", query);
 
-	if(uid != GLOBAL_USER) {
+	if (uid != GLOBAL_USER) {
 		if (db_exec_usr_rw(query) < 0) {
 			free(query);
 			return AIL_ERROR_DB_FAILED;
@@ -1537,9 +1486,8 @@ static ail_error_e _clean_pkgid_data(const char* pkgid, uid_t uid)
 
 	retv_if(!pkgid, AIL_ERROR_INVALID_PARAMETER);
 
-	if (db_open(DB_OPEN_RW, uid) ){
+	if (db_open(DB_OPEN_RW, uid))
 		return AIL_ERROR_DB_FAILED;
-	}
 
 	size = strlen(pkgid) + (0x01 << 10);
 	query = calloc(1, size);
@@ -1547,7 +1495,7 @@ static ail_error_e _clean_pkgid_data(const char* pkgid, uid_t uid)
 
 	snprintf(query, size, "delete from app_info where x_slp_pkgid = '%s'", pkgid);
 
-	if(uid != GLOBAL_USER) {
+	if (uid != GLOBAL_USER) {
 		if (db_exec_usr_rw(query) < 0) {
 			free(query);
 			return AIL_ERROR_DB_FAILED;
@@ -1559,9 +1507,9 @@ static ail_error_e _clean_pkgid_data(const char* pkgid, uid_t uid)
 		}
 	}
 	snprintf(query, size, "delete from localname where x_slp_pkgid = '%s'", pkgid);
-	_D("query=%s",query);
+	_D("query=%s", query);
 
-	if(uid != GLOBAL_USER) {
+	if (uid != GLOBAL_USER) {
 		if (db_exec_usr_rw(query) < 0) {
 			free(query);
 			return AIL_ERROR_DB_FAILED;
@@ -1586,17 +1534,17 @@ static ail_error_e _send_db_done_noti(noti_type type, const char *package)
 	retv_if(!package, AIL_ERROR_INVALID_PARAMETER);
 
 	switch (type) {
-		case NOTI_ADD:
-			type_string = "create";
-			break;
-		case NOTI_UPDATE:
-			type_string = "update";
-			break;
-		case NOTI_REMOVE:
-			type_string = "delete";
-			break;
-		default:
-			return AIL_ERROR_FAIL;
+	case NOTI_ADD:
+		type_string = "create";
+		break;
+	case NOTI_UPDATE:
+		type_string = "update";
+		break;
+	case NOTI_REMOVE:
+		type_string = "delete";
+		break;
+	default:
+		return AIL_ERROR_FAIL;
 	}
 
 	size = snprintf(NULL, 0, "%s:%s:%u", type_string, package, getuid());
@@ -1611,11 +1559,10 @@ static ail_error_e _send_db_done_noti(noti_type type, const char *package)
 	return AIL_ERROR_OK;
 }
 
-
-static void inline _name_item_free_func(gpointer data)
+static inline void _name_item_free_func(gpointer data)
 {
 	struct name_item *item = (struct name_item *)data;
-	if (item){
+	if (item) {
 		SAFE_FREE(item->locale);
 		item->locale = NULL;
 		SAFE_FREE(item->name);
@@ -1652,15 +1599,6 @@ static void _fini_desktop_info(desktop_info_s *info)
 	}
 
 	return;
-}
-
-static int __is_authorized()
-{
-	uid_t uid = getuid();
-	if ((uid_t) GLOBAL_USER == uid )
-		return 1;
-	else
-		return 0;
 }
 
 /* Public functions */
@@ -1725,9 +1663,8 @@ end:
 
 EXPORT_API ail_error_e ail_desktop_update(const char *appid)
 {
-	return ail_usr_desktop_update(appid,GLOBAL_USER);
+	return ail_usr_desktop_update(appid, GLOBAL_USER);
 }
-
 
 EXPORT_API ail_error_e ail_usr_desktop_remove(const char *appid, uid_t uid)
 {
@@ -1756,7 +1693,7 @@ EXPORT_API ail_error_e ail_usr_desktop_clean(const char *pkgid, uid_t uid)
 
 	retv_if(!pkgid, AIL_ERROR_INVALID_PARAMETER);
 
-	_D("ail_desktop_clean=%s",pkgid);
+	_D("ail_desktop_clean=%s", pkgid);
 
 	ret = _clean_pkgid_data(pkgid, uid);
 	retv_if(ret != AIL_ERROR_OK, AIL_ERROR_FAIL);
@@ -1780,7 +1717,7 @@ EXPORT_API ail_error_e ail_usr_desktop_fota(const char *appid, uid_t uid)
 	if (ret != AIL_ERROR_OK)
 		goto end;
 
-	ret = _read_desktop_info(&info,uid);
+	ret = _read_desktop_info(&info, uid);
 	if (ret != AIL_ERROR_OK)
 		goto end;
 

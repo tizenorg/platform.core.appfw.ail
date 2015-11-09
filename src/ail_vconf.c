@@ -36,13 +36,11 @@
 #define CMD_VCONF_SET_STR	VCONFTOOL " -q set -t string '%s' '%s' -f"
 
 /*
-
- Reads the content of the input 'stream' (it should be a text without nul
-characters) in a feshly allocated buffer, using allocations of 'block_size'
-increment.
-
- Returns the read string or NULL in case of error.
-*/
+ * Reads the content of the input 'stream' (it should be a text without nul
+ * characters) in a feshly allocated buffer, using allocations of 'block_size'
+ * increment.
+ * Returns the read string or NULL in case of error.
+ */
 static char *_pread_(FILE *stream, size_t block_size)
 {
 	char *result = NULL;
@@ -50,7 +48,7 @@ static char *_pread_(FILE *stream, size_t block_size)
 	size_t length = 0;
 	char *string;
 
-	for(;;) {
+	for (;;) {
 		/* is on error ? */
 		if (ferror(stream) != 0) {
 			free(result);
@@ -79,13 +77,11 @@ static char *_pread_(FILE *stream, size_t block_size)
 }
 
 /*
- Runs the command given by 'cmddef' and its arguments formated as printf.
-
- The resulting output stream of the command is return as a freshly allocated
-string in '*readen'.
-
- Retruns 0 in case of success or -1 in case of error.
-*/
+ * Runs the command given by 'cmddef' and its arguments formated as printf.
+ * The resulting output stream of the command is return as a freshly allocated
+ * string in '*readen'.
+ * Retruns 0 in case of success or -1 in case of error.
+ */
 static int _ail_vconf_exec_(char **readen, const char *cmddef, ...)
 {
 	int result;
@@ -102,9 +98,8 @@ static int _ail_vconf_exec_(char **readen, const char *cmddef, ...)
 		stream = popen(command, "r");
 		if (stream != NULL) {
 			*readen = _pread_(stream, 1024);
-			if (pclose(stream) != -1 && *readen != NULL) {
+			if (pclose(stream) != -1 && *readen != NULL)
 				result = 0;
-			}
 		}
 		free(command);
 	}
@@ -112,8 +107,8 @@ static int _ail_vconf_exec_(char **readen, const char *cmddef, ...)
 }
 
 /*
- vconf_get_str with fallback to the command vconftool.
-*/
+ * vconf_get_str with fallback to the command vconftool.
+ */
 EXPORT_API char *ail_vconf_get_str(const char *keyname)
 {
 	char *result;
@@ -132,9 +127,8 @@ EXPORT_API char *ail_vconf_get_str(const char *keyname)
 				result = result + 3;
 				/* remove trailing '\n' */
 				length = strlen(result);
-				if (length > 0 && result[length-1] == '\n') {
-					result[length-1] = 0;
-				}
+				if (length > 0 && result[length-1] == '\n')
+					result[length - 1] = 0;
 				/* get the final result */
 				result = strdup(result);
 			}
@@ -145,8 +139,8 @@ EXPORT_API char *ail_vconf_get_str(const char *keyname)
 }
 
 /*
- vconf_set_str with fallback to the command vconftool.
-*/
+ * vconf_set_str with fallback to the command vconftool.
+ */
 EXPORT_API int ail_vconf_set_str(const char *keyname, const char *strval)
 {
 	int result;
@@ -161,6 +155,3 @@ EXPORT_API int ail_vconf_set_str(const char *keyname, const char *strval)
 }
 
 #endif
-
-
-

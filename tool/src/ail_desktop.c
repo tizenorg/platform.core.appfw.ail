@@ -29,7 +29,6 @@
 
 #include <ail.h>
 
-
 static void _print_help(const char *cmd)
 {
 	fprintf(stderr, "Usage:\n");
@@ -51,86 +50,68 @@ static void _print_help(const char *cmd)
 	fprintf(stderr, "\n");
 }
 
-
-
 static ail_error_e _add_desktop(const char *package)
 {
 	ail_error_e ret;
 
-	if (!package) {
+	if (!package)
 		return AIL_ERROR_FAIL;
-	}
 
 	ret = ail_desktop_add(package);
-	if (ret != AIL_ERROR_OK) {
+	if (ret != AIL_ERROR_OK)
 		return AIL_ERROR_FAIL;
-	}
 
 	return AIL_ERROR_OK;
 }
-
-
 
 static ail_error_e _update_desktop(const char *package)
 {
 	ail_error_e ret;
 
-	if (!package) {
+	if (!package)
 		return AIL_ERROR_FAIL;
-	}
 
 	ret = ail_desktop_update(package);
-	if (ret != AIL_ERROR_OK) {
+	if (ret != AIL_ERROR_OK)
 		return AIL_ERROR_FAIL;
-	}
 
 	return AIL_ERROR_OK;
 }
-
-
 
 static ail_error_e _remove_desktop(const char *package)
 {
 	ail_error_e ret;
 
-	if (!package) {
+	if (!package)
 		return AIL_ERROR_FAIL;
-	}
 
 	ret = ail_desktop_remove(package);
-	if (ret != AIL_ERROR_OK) {
+	if (ret != AIL_ERROR_OK)
 		return AIL_ERROR_FAIL;
-	}
 
 	return AIL_ERROR_OK;
 }
 
-
-
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
 	ail_error_e ret = AIL_ERROR_OK;
 
 	if (3 == argc) {
-		if (!strncmp(argv[1], "add", 3)) {
+		if (!strncmp(argv[1], "add", 3))
 			ret = _add_desktop(argv[2]);
-		} else if (!strncmp(argv[1], "update", 6)) {
+		else if (!strncmp(argv[1], "update", 6))
 			ret = _update_desktop(argv[2]);
-		} else if (!strncmp(argv[1], "remove", 6)) {
+		else if (!strncmp(argv[1], "remove", 6))
 			ret = _remove_desktop(argv[2]);
-		} else {
+		else
 			fprintf(stderr, "%s is a invalid command\n", argv[1]);
-		}
-	}
-	else {
+	} else {
 		_print_help(argv[0]);
 		return EXIT_FAILURE;
 	}
 
-	if (ret != AIL_ERROR_OK) {
+	if (ret != AIL_ERROR_OK)
 		fprintf(stderr, "There are some problems\n");
-	}
 
 	return EXIT_SUCCESS;
 }
-

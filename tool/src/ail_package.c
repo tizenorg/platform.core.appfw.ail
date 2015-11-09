@@ -58,7 +58,6 @@ char *prop_tbl[] = {
 	NULL
 };
 
-
 static void _print_help(const char *cmd)
 {
 	int i;
@@ -70,37 +69,30 @@ static void _print_help(const char *cmd)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "       <COLUMN NAME>\n");
 
-	for (i = 0; prop_tbl[i]; i++) {
+	for (i = 0; prop_tbl[i]; i++)
 		fprintf(stderr, "          %s\n", prop_tbl[i]);
-	}
 
 	fprintf(stderr, "\n");
 	fprintf(stderr, "       Ex) %s get com.samsung.menu-screen X_SLP_SERVICE\n", cmd);
 	fprintf(stderr, "\n");
 }
 
-
-
 static int _get_property(const char *property)
 {
 	int i;
 
-	if (!property) {
+	if (!property)
 		return 0;
-	}
 
 	for (i = 0; prop_tbl[i]; i++) {
-		if (!strcasecmp(prop_tbl[i], property)) {
+		if (!strcasecmp(prop_tbl[i], property))
 			return i;
-		}
 	}
 
 	fprintf(stderr, "%s is not found\n", property);
 
 	return -1;
 }
-
-
 
 static ail_error_e _get_appinfo(const char *package, const char *property, uid_t uid)
 {
@@ -114,7 +106,7 @@ static ail_error_e _get_appinfo(const char *package, const char *property, uid_t
 	int t;
 
 	/* __is admin */
-	ret = ail_package_get_appinfo(package, &handle);
+	ret = ail_get_appinfo(package, &handle);
 	if (ret != AIL_ERROR_OK)
 		return AIL_ERROR_FAIL;
 
@@ -124,7 +116,7 @@ static ail_error_e _get_appinfo(const char *package, const char *property, uid_t
 
 	e.prop = prop;
 	p = &e;
-	ELEMENT_TYPE(p,t);
+	ELEMENT_TYPE(p, t);
 
 	if (t == VAL_TYPE_STR) {
 		ret = ail_appinfo_get_str(handle, property, &str);
@@ -149,7 +141,7 @@ static ail_error_e _get_appinfo(const char *package, const char *property, uid_t
 END:
 	free(str);
 
-	ret = ail_package_destroy_appinfo(handle);
+	ret = ail_destroy_appinfo(handle);
 	if (ret != AIL_ERROR_OK)
 		return AIL_ERROR_FAIL;
 
@@ -161,21 +153,16 @@ int main(int argc, char** argv)
 	ail_error_e ret = AIL_ERROR_OK;
 
 
-	if (4 == argc) {
-		if (!strncmp(argv[1], "get", 3)) {
+	if (argc == 4) {
+		if (!strncmp(argv[1], "get", 3))
 			ret = _get_appinfo(argv[2], argv[3], getuid());
-		}
-	}
-	else {
+	} else {
 		_print_help(argv[0]);
 		return EXIT_FAILURE;
 	}
 
-	if (ret != AIL_ERROR_OK) {
+	if (ret != AIL_ERROR_OK)
 		fprintf(stderr, "There are some problems\n");
-	}
 
 	return EXIT_SUCCESS;
 }
-
-

@@ -19,9 +19,8 @@
  *
  */
 
-
-
-
+#define _GNU_SOURCE
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <db-util.h>
@@ -42,7 +41,7 @@
 
 #define QUERY_CREATE_VIEW_LOCAL "CREATE temp VIEW localname as select distinct * from (select  * from main.localname m union select * from Global.localname g)"
 
-#define SET_SMACK_LABEL(x,uid) \
+#define SET_SMACK_LABEL(x, uid) \
 	do { \
 		if (smack_setlabel((x), (((uid) == GLOBAL_USER) ? "*" : "User"), SMACK_LABEL_ACCESS)) \
 			_E("failed chsmack -a \"User/*\" %s", x); \
@@ -82,9 +81,9 @@
 
 static __thread struct {
 	sqlite3 *dbUserro;
-        sqlite3 *dbGlobalro;
-        sqlite3 *dbUserrw;
-        sqlite3 *dbGlobalrw;
+	sqlite3 *dbGlobalro;
+	sqlite3 *dbUserrw;
+	sqlite3 *dbGlobalrw;
 } db_info = {
 	.dbUserro = NULL,
 	.dbGlobalro = NULL,
@@ -96,7 +95,6 @@ static __thread sqlite3 *dbInit = NULL;
 
 static int ail_db_change_perm(const char *db_file, uid_t uid)
 {
-	char buf[BUFSIZE];
 	char journal_file[BUFSIZE];
 	char *files[3];
 	int ret;
@@ -134,18 +132,16 @@ static int ail_db_change_perm(const char *db_file, uid_t uid)
 	for (i = 0; files[i]; i++) {
 		/* Compare git_t type and not group name */
 		ret = chown(files[i], uid, userinfo->pw_gid);
-		SET_SMACK_LABEL(files[i],uid);
+		SET_SMACK_LABEL(files[i], uid);
 		if (ret == -1) {
-			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", db_file, uid, userinfo->pw_gid, buf);
+			_E("FAIL : chown %s %d.%d, because %d", db_file, uid, userinfo->pw_gid, errno);
 			free(pwd_buf);
 			return AIL_ERROR_FAIL;
 		}
 
 		ret = chmod(files[i], S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 		if (ret == -1) {
-			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chmod %s 0664, because %s", db_file, buf);
+			_E("FAIL : chmod %s 0664, because %d", db_file, errno);
 			free(pwd_buf);
 			return AIL_ERROR_FAIL;
 		}
@@ -161,7 +157,6 @@ char *ail_get_icon_path(uid_t uid)
 	char *result = NULL;
 	struct group grpbuf;
 	struct group *grpinfo = NULL;
-	char *dir = NULL;
 	struct passwd pwd;
 	struct passwd *userinfo = NULL;
 	int buflen;
@@ -216,7 +211,9 @@ char *ail_get_icon_path(uid_t uid)
 			return NULL;
 		}
 
-		asprintf(&result, "%s/.applications/icons/", userinfo->pw_dir);
+		if (asprintf(&result, "%s/.applications/icons/", userinfo->pw_dir) == -1)
+			_E("out of memory: asprintf() is failed.");
+
 		free(pwd_buf);
 	} else {
 		result = strdup(tzplatform_mkpath(TZ_SYS_RW_ICONS, "/"));
@@ -233,10 +230,8 @@ char *ail_get_icon_path(uid_t uid)
 		ret = chown(result, uid, grpinfo ? grpinfo->gr_gid : 0);
 		SET_SMACK_LABEL(result, uid);
 		if (ret == -1) {
-			char buf[BUFSIZE];
-			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", result, uid,
-					grpinfo ? grpinfo->gr_gid : 0, buf);
+			_E("FAIL : chown %s %d.%d, because %d", result, uid,
+					grpinfo ? grpinfo->gr_gid : 0, errno);
 		}
 	}
 
@@ -250,7 +245,9 @@ char *ail_get_app_DB_journal(uid_t uid)
 	char *app_path = ail_get_app_DB(uid);
 	char *result = NULL;
 
-	asprintf(&result, "%s-journal", app_path);
+	if (asprintf(&result, "%s-journal", app_path) == -1)
+		_E("out of memory: asprintf() is failed.");
+
 	free(app_path);
 
 	return  result;
@@ -317,7 +314,9 @@ char *ail_get_app_DB(uid_t uid)
 			return NULL;
 		}
 
-		asprintf(&result, "%s/.applications/dbspace/.app_info.db", userinfo->pw_dir);
+		if (asprintf(&result, "%s/.applications/dbspace/.app_info.db", userinfo->pw_dir) == -1)
+			_E("out of memory: asprintf() is failed.");
+
 		free(pwd_buf);
 	} else {
 		result = strdup(APP_INFO_DB_FILE);
@@ -346,12 +345,10 @@ char *ail_get_app_DB(uid_t uid)
 		_E("FAIL : to create directory %s %d", temp, errno);
 	} else if (getuid() == OWNER_ROOT) {
 		ret = chown(temp, uid, grpinfo ? grpinfo->gr_gid : 0);
-		SET_SMACK_LABEL(temp,uid);
+		SET_SMACK_LABEL(temp, uid);
 		if (ret == -1) {
-			char buf[BUFSIZE];
-			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", temp, uid,
-					grpinfo ? grpinfo->gr_gid : 0, buf);
+			_E("FAIL : chown %s %d.%d, because %d", temp, uid,
+					grpinfo ? grpinfo->gr_gid : 0, errno);
 		}
 	}
 
@@ -366,7 +363,6 @@ char *ail_get_desktop_path(uid_t uid)
 	char *result = NULL;
 	struct group grpbuf;
 	struct group *grpinfo = NULL;
-	char *dir = NULL;
 	struct passwd pwd;
 	struct passwd *userinfo = NULL;
 	int buflen;
@@ -421,7 +417,9 @@ char *ail_get_desktop_path(uid_t uid)
 			return NULL;
 		}
 
-		asprintf(&result, "%s/.applications/desktop/", userinfo->pw_dir);
+		if (asprintf(&result, "%s/.applications/desktop/", userinfo->pw_dir) == -1)
+			_E("out of memory: asprintf() is failed.");
+
 		free(pwd_buf);
 	} else {
 		result = strdup(tzplatform_mkpath(TZ_SYS_RW_DESKTOP_APP, "/"));
@@ -436,12 +434,10 @@ char *ail_get_desktop_path(uid_t uid)
 		_E("FAIL : to create directory %s %d", result, errno);
 	} else if (getuid() == OWNER_ROOT) {
 		ret = chown(result, uid, grpinfo ? grpinfo->gr_gid : 0);
-		SET_SMACK_LABEL(result,uid);
+		SET_SMACK_LABEL(result, uid);
 		if (ret == -1) {
-			char buf[BUFSIZE];
-			strerror_r(errno, buf, sizeof(buf));
-			_E("FAIL : chown %s %d.%d, because %s", result, uid,
-					grpinfo ? grpinfo->gr_gid : 0, buf);
+			_E("FAIL : chown %s %d.%d, because %d", result, uid,
+					grpinfo ? grpinfo->gr_gid : 0, errno);
 		}
 	}
 
@@ -470,7 +466,6 @@ static ail_error_e db_do_prepare(sqlite3 *db, const char *query, sqlite3_stmt **
 ail_error_e db_open(db_open_mode mode, uid_t uid)
 {
 	int ret;
-	int changed = 0;
 	int i;
 	char *db;
 	char *global_db;
@@ -528,16 +523,15 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 	}
 
 	if (access(db, F_OK)) {
-		if (AIL_ERROR_OK == db_util_open_with_options(db, &dbInit, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL))
-		{
+		if (AIL_ERROR_OK == db_util_open_with_options(db,
+					&dbInit, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL)) {
 			for (i = 0; tbls[i] != NULL; i++) {
 				ret = do_db_exec(tbls[i], dbInit);
 				if (ret != AIL_ERROR_OK)
 					goto catch;
 			}
-			if(getuid() == OWNER_ROOT && AIL_ERROR_OK != ail_db_change_perm(db, uid)) {
+			if (getuid() == OWNER_ROOT && AIL_ERROR_OK != ail_db_change_perm(db, uid))
 				_E("Failed to change permission\n");
-			}
 		} else {
 			dbInit = NULL;
 			_E("Failed to create table %s\n", db);
@@ -549,8 +543,8 @@ ail_error_e db_open(db_open_mode mode, uid_t uid)
 		tryvm_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
 		dbInit = NULL;
 	}
-	if(mode & DB_OPEN_RO) {
-		if(uid != GLOBAL_USER) {
+	if (mode & DB_OPEN_RO) {
+		if (uid != GLOBAL_USER) {
 			if (!db_info.dbUserro) {
 				db_util_open_with_options(db, &db_info.dbUserro, SQLITE_OPEN_READONLY, NULL);
 				char query_attach[AIL_SQL_QUERY_MAX_LEN];
@@ -651,7 +645,7 @@ ail_error_e db_bind_int(sqlite3_stmt *stmt, int idx, int value)
 	return AIL_ERROR_OK;
 }
 
-ail_error_e db_bind_text(sqlite3_stmt *stmt, int idx, char* value)
+ail_error_e db_bind_text(sqlite3_stmt *stmt, int idx, const char* value)
 {
 	int ret;
 
@@ -671,10 +665,10 @@ ail_error_e db_step(sqlite3_stmt *stmt)
 
 	ret = sqlite3_step(stmt);
 	switch (ret) {
-		case SQLITE_DONE:
-			return AIL_ERROR_NO_DATA;
-		case SQLITE_ROW:
-			return AIL_ERROR_OK;
+	case SQLITE_DONE:
+		return AIL_ERROR_NO_DATA;
+	case SQLITE_ROW:
+		return AIL_ERROR_OK;
 	}
 
 	retv_with_dbmsg_if(1, AIL_ERROR_DB_FAILED);
@@ -688,7 +682,7 @@ ail_error_e db_column_bool(sqlite3_stmt *stmt, int index, bool *value)
 	retv_if(!value, AIL_ERROR_INVALID_PARAMETER);
 
 	out_val = sqlite3_column_int(stmt, index);
-	*value = (out_val == 1)? true:false;
+	*value = (out_val == 1) ? true : false;
 
 	return AIL_ERROR_OK;
 }
@@ -750,8 +744,8 @@ ail_error_e do_db_exec(const char *query, sqlite3 * fileSQL)
 	ret = sqlite3_exec(fileSQL, query, NULL, NULL, &errmsg);
 	if (ret != SQLITE_OK) {
 		_E("Cannot execute this query - %s. because %s",
-				query, errmsg? errmsg:"uncatched error");
-		if(errmsg)
+				query, errmsg ? errmsg : "uncatched error");
+		if (errmsg)
 			sqlite3_free(errmsg);
 		return AIL_ERROR_DB_FAILED;
 	}
@@ -783,22 +777,21 @@ ail_error_e db_close(void)
 {
 	int ret;
 
-	if(db_info.dbUserro) {
+	if (db_info.dbUserro) {
 		ret = sqlite3_close(db_info.dbUserro);
 		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
-
 		db_info.dbUserro = NULL;
 	}
-	if(db_info.dbGlobalrw) {
+
+	if (db_info.dbGlobalrw) {
 		ret = sqlite3_close(db_info.dbGlobalrw);
 		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
-
 		db_info.dbGlobalrw = NULL;
 	}
-	if(db_info.dbUserrw) {
+
+	if (db_info.dbUserrw) {
 		ret = sqlite3_close(db_info.dbUserrw);
 		retv_with_dbmsg_if(ret != SQLITE_OK, AIL_ERROR_DB_FAILED);
-
 		db_info.dbUserrw = NULL;
 	}
 
@@ -813,7 +806,7 @@ EXPORT_API ail_error_e ail_db_close(void)
 int db_exec_sqlite_query(char *query, sqlite_query_callback callback, void *data)
 {
 	char *error_message = NULL;
-	if(db_info.dbGlobalro) {
+	if (db_info.dbGlobalro) {
 		if (SQLITE_OK !=
 			sqlite3_exec(db_info.dbGlobalro, query, callback, data, &error_message)) {
 			_E("Don't execute query = %s error message = %s\n", query,
@@ -822,7 +815,7 @@ int db_exec_sqlite_query(char *query, sqlite_query_callback callback, void *data
 			return -1;
 		}
 	}
-	if(db_info.dbUserro) {
+	if (db_info.dbUserro) {
 		if (SQLITE_OK !=
 			sqlite3_exec(db_info.dbUserro, query, callback, data, &error_message)) {
 			_E("Don't execute query = %s error message = %s\n", query,

@@ -19,9 +19,6 @@
  *
  */
 
-
-
-
 #ifndef __AIL_DB_H__
 #define __AIL_DB_H__
 
@@ -48,7 +45,7 @@ ail_error_e db_prepare_globalrw(const char *query, sqlite3_stmt **stmt);
 
 ail_error_e db_bind_bool(sqlite3_stmt *stmt, int idx, bool value);
 ail_error_e db_bind_int(sqlite3_stmt *stmt, int idx, int value);
-ail_error_e db_bind_text(sqlite3_stmt *stmt, int idx, char* value);
+ail_error_e db_bind_text(sqlite3_stmt *stmt, int idx, const char *value);
 
 ail_error_e db_step(sqlite3_stmt *stmt);
 
@@ -59,10 +56,11 @@ ail_error_e db_column_str(sqlite3_stmt *stmt, int index, char **str);
 ail_error_e db_reset(sqlite3_stmt *stmt);
 ail_error_e db_finalize(sqlite3_stmt *stmt);
 
-ail_error_e do_db_exec(const char *query,sqlite3 * fileSQL);
+ail_error_e do_db_exec(const char *query, sqlite3 *fileSQL);
 ail_error_e db_exec_usr_rw(const char *query);
 ail_error_e db_exec_usr_ro(const char *query);
+ail_error_e db_exec_glo_rw(const char *query);
 ail_error_e db_close(void);
 int db_exec_sqlite_query(char *query, sqlite_query_callback callback, void *data);
-#endif
-// End of file
+
+#endif /* __AIL_DB_H__ */

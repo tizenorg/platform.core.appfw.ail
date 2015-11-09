@@ -37,16 +37,20 @@
 #ifdef _E
 #undef _E
 #endif
-#define _E(fmt, arg...) fprintf(stderr, "[AIL_INITDB][E][%s,%d] "fmt"\n", __FUNCTION__, __LINE__, ##arg);
+#define _E(fmt, arg...) fprintf(stderr, "[AIL_INITDB][E][%s,%d] "fmt"\n", __FUNCTION__, __LINE__, ##arg)
 
 #ifdef _D
 #undef _D
 #endif
-#define _D(fmt, arg...) fprintf(stderr, "[AIL_INITDB][D][%s,%d] "fmt"\n", __FUNCTION__, __LINE__, ##arg);
+#define _D(fmt, arg...) fprintf(stderr, "[AIL_INITDB][D][%s,%d] "fmt"\n", __FUNCTION__, __LINE__, ##arg)
 
 #define SET_DEFAULT_LABEL(x) \
-	if(smack_setlabel((x), "*", SMACK_LABEL_ACCESS)) _E("failed chsmack -a \"*\" %s", x) \
-	else _D("chsmack -a \"*\" %s", x)
+	do { \
+		if (smack_setlabel((x), "*", SMACK_LABEL_ACCESS)) \
+			_E("failed chsmack -a \"*\" %s", x); \
+		else \
+			_D("chsmack -a \"*\" %s", x); \
+	} while (0)
 
 static int syncdb_user_count_app(void)
 {
@@ -55,9 +59,8 @@ static int syncdb_user_count_app(void)
 	int total = 0;
 
 	ret = ail_filter_new(&filter);
-	if (ret != AIL_ERROR_OK) {
+	if (ret != AIL_ERROR_OK)
 		return -1;
-	}
 
 	ret = ail_filter_add_bool(filter, AIL_PROP_NODISPLAY_BOOL, false);
 	if (ret != AIL_ERROR_OK) {
@@ -75,7 +78,7 @@ static int syncdb_user_count_app(void)
 	return total;
 }
 
-char* _desktop_to_package(const char* desktop)
+char *_desktop_to_package(const char* desktop)
 {
 	char *package;
 	char *tmp;
@@ -86,7 +89,7 @@ char* _desktop_to_package(const char* desktop)
 	retv_if(!package, NULL);
 
 	tmp = strrchr(package, '.');
-	if(tmp == NULL) {
+	if (tmp == NULL) {
 		_E("[%s] is not a desktop file", package);
 		free(package);
 		return NULL;
@@ -109,12 +112,12 @@ int syncdb_user_load_directory(const char *directory)
 {
 	DIR *dir;
 	struct dirent entry, *result;
-	int len, ret;
+	int ret;
 	char buf[BUFSZE];
 	int total_cnt = 0;
 	int ok_cnt = 0;
 
-	/*  desktop file */
+	/* desktop file */
 	dir = opendir(directory);
 	if (!dir) {
 		if (strerror_r(errno, buf, sizeof(buf)) == 0)
@@ -122,7 +125,6 @@ int syncdb_user_load_directory(const char *directory)
 		return AIL_ERROR_FAIL;
 	}
 
-	len = strlen(directory) + 1;
 	_D("Loading desktop files from %s", directory);
 
 	for (ret = readdir_r(dir, &entry, &result);
@@ -130,7 +132,8 @@ int syncdb_user_load_directory(const char *directory)
 			ret = readdir_r(dir, &entry, &result)) {
 		char *package;
 
-		if (entry.d_name[0] == '.') continue;
+		if (entry.d_name[0] == '.')
+			continue;
 		total_cnt++;
 		package = _desktop_to_package(entry.d_name);
 		if (!package) {
@@ -138,11 +141,11 @@ int syncdb_user_load_directory(const char *directory)
 			continue;
 		}
 
-		if (ail_usr_desktop_add(package, getuid()) != AIL_ERROR_OK) {
+		if (ail_usr_desktop_add(package, getuid()) != AIL_ERROR_OK)
 			_E("Failed to add a package[%s]", package);
-		} else {
+		else
 			ok_cnt++;
-		}
+
 		free(package);
 	}
 

@@ -71,20 +71,20 @@ struct _ail_map_t {
 };
 
 static struct _ail_map_t prop_map[] = {
-	{E_AIL_PROP_PACKAGE_STR, 		AIL_PROP_PACKAGE_STR},
-	{E_AIL_PROP_EXEC_STR, 			AIL_PROP_EXEC_STR},
-	{E_AIL_PROP_NAME_STR, 			AIL_PROP_NAME_STR},
-	{E_AIL_PROP_TYPE_STR, 			AIL_PROP_TYPE_STR},
-	{E_AIL_PROP_ICON_STR, 			AIL_PROP_ICON_STR},
-	{E_AIL_PROP_CATEGORIES_STR, 		AIL_PROP_CATEGORIES_STR},
-	{E_AIL_PROP_VERSION_STR, 		AIL_PROP_VERSION_STR},
-	{E_AIL_PROP_MIMETYPE_STR, 		AIL_PROP_MIMETYPE_STR},
-	{E_AIL_PROP_X_SLP_SERVICE_STR,		AIL_PROP_X_SLP_SERVICE_STR},
-	{E_AIL_PROP_X_SLP_PACKAGETYPE_STR, 	AIL_PROP_X_SLP_PACKAGETYPE_STR},
+	{E_AIL_PROP_PACKAGE_STR, AIL_PROP_PACKAGE_STR},
+	{E_AIL_PROP_EXEC_STR, AIL_PROP_EXEC_STR},
+	{E_AIL_PROP_NAME_STR, AIL_PROP_NAME_STR},
+	{E_AIL_PROP_TYPE_STR, AIL_PROP_TYPE_STR},
+	{E_AIL_PROP_ICON_STR, AIL_PROP_ICON_STR},
+	{E_AIL_PROP_CATEGORIES_STR, AIL_PROP_CATEGORIES_STR},
+	{E_AIL_PROP_VERSION_STR, AIL_PROP_VERSION_STR},
+	{E_AIL_PROP_MIMETYPE_STR, AIL_PROP_MIMETYPE_STR},
+	{E_AIL_PROP_X_SLP_SERVICE_STR, AIL_PROP_X_SLP_SERVICE_STR},
+	{E_AIL_PROP_X_SLP_PACKAGETYPE_STR, AIL_PROP_X_SLP_PACKAGETYPE_STR},
 	{E_AIL_PROP_X_SLP_PACKAGECATEGORIES_STR, AIL_PROP_X_SLP_PACKAGECATEGORIES_STR},
-	{E_AIL_PROP_X_SLP_PACKAGEID_STR, 	AIL_PROP_X_SLP_PACKAGEID_STR},
-	{E_AIL_PROP_X_SLP_SVC_STR, 		AIL_PROP_X_SLP_SVC_STR},
-	{E_AIL_PROP_X_SLP_EXE_PATH, 		AIL_PROP_X_SLP_EXE_PATH},
+	{E_AIL_PROP_X_SLP_PACKAGEID_STR, AIL_PROP_X_SLP_PACKAGEID_STR},
+	{E_AIL_PROP_X_SLP_SVC_STR, AIL_PROP_X_SLP_SVC_STR},
+	{E_AIL_PROP_X_SLP_EXE_PATH, AIL_PROP_X_SLP_EXE_PATH},
 	{E_AIL_PROP_NODISPLAY_BOOL, AIL_PROP_NODISPLAY_BOOL},
 	{E_AIL_PROP_X_SLP_TASKMANAGE_BOOL, AIL_PROP_NODISPLAY_BOOL},
 	{E_AIL_PROP_X_SLP_MULTIPLE_BOOL, AIL_PROP_X_SLP_MULTIPLE_BOOL},
@@ -107,28 +107,25 @@ static struct _ail_map_t prop_map[] = {
 
 static const char *_ail_convert_to_property(int prop)
 {
-	int i = 0;
+	int i;
 
 	if (prop < E_AIL_PROP_STR_MIN || prop > E_AIL_PROP_BOOL_MAX)
 		return NULL;
 
-	for (i=0 ; i < (E_AIL_PROP_BOOL_MAX + 1) ; i++) {
-		if (prop == prop_map[i].prop) {
+	for (i = 0 ; i < (E_AIL_PROP_BOOL_MAX + 1) ; i++) {
+		if (prop == prop_map[i].prop)
 			return prop_map[i].property;
-		}
 	}
 
 	return NULL;
 }
-
-
 
 static int _get_cmd(const char *arg)
 {
 	int r;
 	int a;
 
-	if(!arg)
+	if (!arg)
 		a = 0;
 	else
 		a = (int)*arg;
@@ -150,51 +147,53 @@ static int _get_cmd(const char *arg)
 	return r;
 }
 
-ail_cb_ret_e appinfo_list_func(const ail_appinfo_h appinfo,  void *user_data)
+static ail_cb_ret_e appinfo_list_func(const ail_appinfo_h appinfo,  void *user_data, uid_t uid)
 {
 	char *rs = NULL;
-	int t=-1;
+	int t = -1;
 	bool b = 0;
 	int n = 0;
 	struct element e;
-	int i=0;
+	int i = 0;
 	struct element *p;
+	bool err = false;
 	ail_error_e error = AIL_ERROR_OK;
 	ail_cb_ret_e ret = AIL_CB_RET_CONTINUE;
 	p = &e;
 
-	bool err = false;
 	ret = AIL_CB_RET_CONTINUE;
-	for(i = 0; i< E_AIL_PROP_BOOL_MAX+1 && err==false; i ++) {
+	for (i = 0; i < E_AIL_PROP_BOOL_MAX + 1 && err == false; i++) {
 		e.prop = i;
 		ELEMENT_TYPE(p, t);
-		switch(t) {
-			case VAL_TYPE_BOOL:
-				error = ail_appinfo_get_bool(appinfo, _ail_convert_to_property(i), &b);
-				if (error) ret = AIL_CB_RET_CANCEL;
-				printf("%s|",b?"true":"false");
-				break;
-			case VAL_TYPE_INT:
-				ail_appinfo_get_int(appinfo, _ail_convert_to_property(i), &n);
-				if (error) ret = AIL_CB_RET_CANCEL;
-				printf("%d|", n);
-				break;
-			case VAL_TYPE_STR:
-				ail_appinfo_get_str(appinfo, _ail_convert_to_property(i), &rs);
-				if (error) ret = AIL_CB_RET_CANCEL;
-				printf("%s|", rs);
-				break;
-			default:
-				fprintf(stderr, "$$$\n");
-				err = true;
-				break;
+		switch (t) {
+		case VAL_TYPE_BOOL:
+			error = ail_appinfo_get_bool(appinfo, _ail_convert_to_property(i), &b);
+			if (error)
+				ret = AIL_CB_RET_CANCEL;
+			printf("%s|", b ? "true" : "false");
+			break;
+		case VAL_TYPE_INT:
+			ail_appinfo_get_int(appinfo, _ail_convert_to_property(i), &n);
+			if (error)
+				ret = AIL_CB_RET_CANCEL;
+			printf("%d|", n);
+			break;
+		case VAL_TYPE_STR:
+			ail_appinfo_get_str(appinfo, _ail_convert_to_property(i), &rs);
+			if (error)
+				ret = AIL_CB_RET_CANCEL;
+			printf("%s|", rs);
+			break;
+		default:
+			fprintf(stderr, "$$$\n");
+			err = true;
+			break;
 		}
 	}
+
 	printf("\n");
 	return ret;
 }
-
-
 
 int main(int argc, char *argv[])
 {
@@ -253,63 +252,59 @@ int main(int argc, char *argv[])
 		ELEMENT_TYPE(p, t);
 
 		switch (o) {
-			case 'c':
-				c = _get_cmd(optarg);
-				break;
-			case 0:
-				switch (t) {
-					case VAL_TYPE_BOOL:
-						if(!strcasecmp(optarg, "true") || !strcasecmp(optarg, "1"))
-							b = true;
-						else if (!strcasecmp(optarg, "false") || !strcasecmp(optarg, "0"))
-							b = false;
-						else {
-							err = true;
-							break;
-						}
-						if (ail_filter_add_bool(f, _ail_convert_to_property(e.prop), b) != AIL_ERROR_OK)
-							err = true;
-						break;
-
-					case VAL_TYPE_INT:
-						if (ail_filter_add_int(f, _ail_convert_to_property(e.prop), atoi(optarg)) != AIL_ERROR_OK)
-							err = true;
-						break;
-
-					case VAL_TYPE_STR:
-						if (ail_filter_add_str(f, _ail_convert_to_property(e.prop), optarg) != AIL_ERROR_OK)
-							err = true;
-						break;
-
-					default:
-						err = true;
-						break;
+		case 'c':
+			c = _get_cmd(optarg);
+			break;
+		case 0:
+			switch (t) {
+			case VAL_TYPE_BOOL:
+				if (!strcasecmp(optarg, "true") || !strcasecmp(optarg, "1"))
+					b = true;
+				else if (!strcasecmp(optarg, "false") || !strcasecmp(optarg, "0"))
+					b = false;
+				else {
+					err = true;
+					break;
 				}
+
+				if (ail_filter_add_bool(f, _ail_convert_to_property(e.prop), b) != AIL_ERROR_OK)
+					err = true;
+				break;
+			case VAL_TYPE_INT:
+				if (ail_filter_add_int(f, _ail_convert_to_property(e.prop), atoi(optarg)) != AIL_ERROR_OK)
+					err = true;
+				break;
+			case VAL_TYPE_STR:
+				if (ail_filter_add_str(f, _ail_convert_to_property(e.prop), optarg) != AIL_ERROR_OK)
+					err = true;
 				break;
 			default:
 				err = true;
 				break;
+			}
+			break;
+		default:
+			err = true;
+			break;
 		}
 	}
 
-	if (err) {
+	if (err)
 		usage(argv[0]);
-	}
 	else {
 		int n = -1;
 		switch (c) {
-			case _CMD_COUNT:
-				if (ail_filter_count_appinfo(f, &n) != AIL_ERROR_OK){
-					fprintf(stderr, "Error: failed to count appinfo\n");
-				}
-				else
-					fprintf(stderr, "count=%d\n", n);
-				break;
-			case _CMD_FILTER:
-				ail_filter_list_appinfo_foreach(f, appinfo_list_func, NULL);
-				break;
-			default:
-				break;
+		case _CMD_COUNT:
+			if (ail_filter_count_appinfo(f, &n) != AIL_ERROR_OK)
+				fprintf(stderr, "Error: failed to count appinfo\n");
+			else
+				fprintf(stderr, "count=%d\n", n);
+			break;
+		case _CMD_FILTER:
+			ail_filter_list_appinfo_foreach(f, appinfo_list_func, NULL);
+			break;
+		default:
+			break;
 		}
 	}
 

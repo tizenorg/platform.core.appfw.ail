@@ -25,14 +25,7 @@
 #include "ail.h"
 #include "ail_private.h"
 
-static void usage(const char *name)
-{
-	fprintf(stderr, "\n");
-	fprintf(stderr, "Usage: %s\n", name);
-	fprintf(stderr, "\n");
-}
-
-ail_cb_ret_e appinfo_list_appid_namefunc(const ail_appinfo_h appinfo, void *user_data)
+ail_cb_ret_e appinfo_list_appid_namefunc(const ail_appinfo_h appinfo, void *user_data, uid_t uid)
 {
 	char *package_str_name = NULL;
 	char *package_str_appid = NULL;
@@ -42,7 +35,7 @@ ail_cb_ret_e appinfo_list_appid_namefunc(const ail_appinfo_h appinfo, void *user
 	ail_appinfo_get_str(appinfo, AIL_PROP_NAME_STR, &package_str_name);
 	ail_appinfo_get_str(appinfo, AIL_PROP_X_SLP_EXE_PATH, &package_str_x_slp_exe);
 
-	printf("'%s' '%s' '%s'\n",package_str_appid, package_str_name, package_str_x_slp_exe);
+	printf("'%s' '%s' '%s'\n", package_str_appid, package_str_name, package_str_x_slp_exe);
 
 	free(package_str_appid);
 	free(package_str_name);
@@ -53,12 +46,9 @@ ail_cb_ret_e appinfo_list_appid_namefunc(const ail_appinfo_h appinfo, void *user
 
 int main(int argc, char *argv[])
 {
-	int o;
-	bool err;
-
 	if (getuid() == 0) {
 		printf("Please use it as non root user\n");
-		return;
+		return -1;
 	}
 
 	printf("Application List for user %lu\n", (long)getuid());
