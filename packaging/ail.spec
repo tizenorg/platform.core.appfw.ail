@@ -75,12 +75,12 @@ fi
 %files
 %manifest %{name}.manifest
 %license LICENSE
-%attr(06775,root,root) %{_bindir}/ail_createdb
+%attr(0775,root,root) %{_bindir}/ail_createdb
 %attr(0775,root,root) %{_bindir}/ail_createdb_user
-%attr(06775,root,root) %{_bindir}/ail_syncdb
+%attr(0775,root,root) %{_bindir}/ail_syncdb
 %attr(0775,root,root) %{_bindir}/ail_syncdb_user
 #obsolete tools
-%attr(06775,root,root) %{_bindir}/ail_initdb
+%attr(0775,root,root) %{_bindir}/ail_initdb
 %attr(0775,root,root) %{_bindir}/ail_initdb_user
 %{_bindir}/ail_fota
 %{_bindir}/ail_desktop
